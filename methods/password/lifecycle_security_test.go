@@ -586,3 +586,58 @@ func TestChallengePurposeSeparation(t *testing.T) {
 		t.Fatal("unsupported purpose")
 	}
 }
+
+type cancelAfterEnrollment struct {
+	AccountStore
+	cancel context.CancelFunc
+}
+
+func (s cancelAfterEnrollment) Enroll(
+	ctx context.Context,
+	a Account,
+	c Challenge,
+) error {
+	if err := s.AccountStore.Enroll(ctx, a, c); err != nil {
+		return err
+	}
+
+	s.cancel()
+
+	return nil
+}
+
+type cancelledSender struct{ called bool }
+
+func (s *cancelledSender) Send(ctx context.Context, _ Notification) error {
+	s.called = true
+	return ctx.Err()
+}
+
+func TestCancelledPostCommitDelivery(t *testing.T) {
+	s, store, _ := testService(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s.store = cancelAfterEnrollment{AccountStore: store, cancel: cancel}
+	sender := &cancelledSender{}
+	s.sender = sender
+
+	var observed error
+
+	s.config.OnDeliveryError = func(_ context.Context, err error) { observed = err }
+	if err := s.Enroll(ctx, "a@example.com", []byte(oldPassword)); err != nil {
+		t.Fatal("post-commit cancellation changed acceptance", err)
+	}
+
+	if !sender.called || observed != ErrDelivery {
+		t.Fatal("cancelled sender failure not observed safely")
+	}
+
+	if _, err := store.LookupAccount(
+		context.Background(),
+		"a@example.com",
+	); err != nil {
+		t.Fatal("post-commit delivery cancellation lost enrollment", err)
+	}
+}

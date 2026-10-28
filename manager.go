@@ -44,7 +44,9 @@ func (m *Manager) StartVersioned(
 	if version <= 0 {
 		return IssuedSession{}, ErrUnauthenticated
 	}
+
 	now := m.config.Clock().UTC()
+
 	return m.issue(ctx, subjectID, version, now, now.Add(m.config.TTL))
 }
 

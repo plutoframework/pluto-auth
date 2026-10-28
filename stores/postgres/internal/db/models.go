@@ -8,6 +8,30 @@ import (
 	"time"
 )
 
+type PlutoAuthAccount struct {
+	ID                string
+	Email             string
+	PasswordHash      string
+	CredentialVersion int64
+	Verified          bool
+	Disabled          bool
+}
+
+type PlutoAuthChallenge struct {
+	TokenDigest       []byte
+	AccountID         string
+	Purpose           string
+	CredentialVersion int64
+	CreatedAt         time.Time
+	ExpiresAt         time.Time
+}
+
+type PlutoAuthLocalSession struct {
+	TokenDigest       []byte
+	AccountID         string
+	CredentialVersion int64
+}
+
 type PlutoAuthSession struct {
 	TokenDigest []byte
 	ID          string

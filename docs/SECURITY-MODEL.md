@@ -1,12 +1,12 @@
-# Initial security contract
+# Security contract
 
 ## Identity and authorization
 
 Manager.Start is a trusted issuance primitive, not a login endpoint. It must
 only follow verified credentials or another trusted authentication ceremony.
-Password.Authenticator provides that verification for local password sign-in.
-Use application-owned credential storage and canonical identifiers. Reject
-disabled users at sign-in and revoke their sessions when account state changes.
+Password.Service provides the local credential lifecycle with verified-email
+sign-in and auth-owned minimal account storage. The older Authenticator verifies
+application-owned credentials only and does not supply lifecycle fencing.
 
 Sessions carry a subject, not roles or a selected tenant. Resolve verified
 memberships and pass their role IDs to Pluto RBAC in the application. Independently
@@ -35,10 +35,16 @@ separate credential challenge.
 
 Revocation affects subsequent store operations, not requests already authorized.
 DeleteSubject revokes records present at that operation; it is not a barrier
-against concurrent or future issuance. Account disabling/password reset needs
-application coordination with credential changes, in-flight logins and session
-issuance (for example transaction locking or a subject generation). This initial
-API does not promise a cross-store atomic password-reset workflow.
+against concurrent or future issuance. The local password service and LocalStore add an issuance barrier: Create locks
+the account and checks its credential version, verified flag and disabled flag.
+Reset/Disable lock the same row, increment its version and delete all challenges
+and sessions in one transaction. An old-password sign-in or consumed session
+rotation cannot issue after that commit. Sessions issued before commit are
+revoked by that transaction. Rotation retains the version. This guarantee needs
+the same LocalStore for every local session operation; plain Store, custom
+stores, direct SQL updates or a second issuance path can bypass it. Already
+authorized requests still run; sensitive business transactions need their own
+cooperative account-state/authorization checks.
 
 Postgres operations never upsert activity. The application applies migrations
 explicitly and schedules PruneExpired. Give the runtime DB role only the required
@@ -98,9 +104,13 @@ client responses; do not expose account existence, database errors or PHC hashes
 ## Scope and verification
 
 This is pre-release library code, not an independently audited identity provider.
-Account enrollment, recovery, email verification, MFA/passkeys, OIDC, API keys,
-JWT issuance, session management UI, audit delivery and step-up auth are outside
-this initial implementation. No route is automatically registered or exposed.
+Local enrollment, verification/resend, password sign-in, recovery/reset and
+disable are implemented in the optional password/Postgres modules. Federated
+OIDC/social providers, MFA/passkeys, OAuth authorization servers, API keys,
+JWT issuance, frontend/admin UI, email changes, audit delivery and step-up auth
+remain outside scope. The application explicitly mounts routes. See
+[local credential contract](LOCAL-CREDENTIALS.md) for detailed policy, atomicity,
+notification and integration requirements.
 
 Tests cover session deadlines/revocation/rotation, password and parser failures,
 HTTP cookies/origins, cancellation, and bounded fuzz and mutation samples. These

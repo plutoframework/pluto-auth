@@ -7,8 +7,8 @@ Module: `github.com/plutoframework/pluto-auth` (Go 1.25.5+).
 Pre-release; no independent security audit or compatibility guarantee.
 
 The active library provides opaque sessions, typed persistence and net/http
-cookie authentication (with opt-in opaque bearer credentials). Optional modules add local password sign-in and a
-Postgres store. Authentication establishes identity; application membership,
+cookie authentication (with opt-in opaque bearer credentials). Optional modules add local enrollment, verified-email password sign-in,
+verification/resend, password recovery, account disable and a Postgres store. Authentication establishes identity; application membership,
 resource policies and [Pluto RBAC](https://github.com/plutoframework/pluto-rbac)
 decide authorization. No hidden globals, startup DDL or automatic routes.
 
@@ -18,7 +18,8 @@ decide authorization. No hidden globals, startup DDL or automatic routes.
 - `httpauth/`: net/http middleware, exact Origin guard and secure host cookies.
 - `stores/memory/`: bounded store for tests and single-process development.
 - `stores/postgres/`: independent pgx/sqlc module, schema and generated queries.
-- `methods/password/`: independent Argon2id module and typed sign-in service.
+- `methods/password/`: independent Argon2id module, local credential service,
+  required sender/limiter contracts and POST-only `passwordhttp` adapter.
 - `docs/SECURITY-MODEL.md`: boundaries, defaults and deliberate limitations.
 - `docs/PROVENANCE.md`: upstream baseline, attribution and fork decisions.
 
@@ -57,11 +58,17 @@ Read the verified session with `httpauth.FromContext(request.Context())`.
 Session metadata contains no roles, permissions or trusted tenant selection.
 
 Manager.Start must follow credential verification. It is not a public login
-operation. For local passwords, construct methods/password.NewAuthenticator
-with your CredentialStore, Hasher, SessionIssuer (the manager), and a real
-AttemptLimiter. SignIn returns an IssuedSession on success; send it with
-transport.WriteCookie, never as a raw token in JSON. Authenticator does not
-perform registration, account recovery or credential updates.
+operation. For the complete local password lifecycle use
+`password.NewService` with `postgres.NewLocal`, a Hasher, an AttemptLimiter and
+an application-supplied Sender. The service constructs its session manager from
+the same fenced store and requires verified email for sign-in. Successful
+SignIn returns an IssuedSession; send it with transport.WriteCookie, never in
+JSON. [Local integration/API guide](docs/LOCAL-CREDENTIALS.md) includes the
+compiling constructor and migration, delivery and operational boundaries.
+
+The older NewAuthenticator remains a low-level compatibility API for externally
+managed credentials. It does not implement verification, updates or issuance
+fencing. Use the new service for this local account workflow.
 
 Wrap login handlers in transport.Guard for Origin validation. Require already
 includes it for cookie-authenticated routes. Set Config.AllowBearer explicitly
@@ -76,8 +83,13 @@ Credentialed CORS and proxy trust are explicit application configuration.
 Import `github.com/plutoframework/pluto-auth/stores/postgres` separately.
 Construct postgres.New(pool) with a pgxpool.Pool. Apply schema.sql through your
 application migration system before serving requests; no constructor applies it.
-Schedule Store.PruneExpired explicitly. The application owns its user table and
-CredentialStore implementation, avoiding a generic untyped database abstraction.
+Schedule Store.PruneExpired explicitly. Session-only users can keep their
+existing schema and `postgres.New(pool)` adapter. Local-password users explicitly
+apply optional migration `migrations/002_local_credentials.sql` and use
+`postgres.NewLocal(pool)` for all local session operations. Auth owns minimal
+account/hash/version and challenge state; application profiles, memberships and
+RBAC remain application-owned. Schedule LocalStore.PruneExpiredChallenges too.
+Never issue or rotate local account sessions through the session-only adapter.
 
 ## Local checks
 
@@ -88,6 +100,7 @@ mise install
 ./scripts/check.sh
 ./scripts/test.sh -race
 ./scripts/fuzz.sh
+# SQL mutations require the disposable PLUTO_AUTH_TEST_DATABASE_URL below.
 python3 scripts/mutation-smoke.py
 ```
 
@@ -110,3 +123,13 @@ Postgres service and runs it. Regenerate SQL via `mise run generate` (sqlc
 Original MIT license and attribution are preserved. The upstream source and
 tests remain available at tag `limen-baseline-a691ec9`; this is intentionally
 not a drop-in replacement for Limen or a promise to maintain its plugin suite.
+
+## Scope
+
+This round implements local password credentials only. Social/federated OIDC
+providers, MFA/passkeys, OAuth authorization servers, frontend/admin UI, email
+address changes and generic identity-platform features remain outside this
+library. There are no automatic admins, tenants or grants. Deployment still
+requires real delivery, shared limits, trusted ingress, migrations and an
+application-specific security review; this is not an audited production-ready
+identity service.

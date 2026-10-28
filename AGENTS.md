@@ -14,6 +14,10 @@
 - Store Use and Consume must be atomic with revocation. Consume is single use.
   Activity/rotation cannot extend absolute expiry. Revocation does not cancel
   in-flight authorized requests or prevent future/concurrent session issuance.
+- LocalStore adds a credential-version fence: reset/disable and local session
+  creation lock the same account. Preserve that fence through rotation; never
+  issue local-account sessions through the session-only adapter. Challenge
+  consumption and credential updates/revocation must commit atomically.
 - Keep files under 1,000 lines, with the configurable 80-column formatting
   target and expanded whitespace. Split source; never compress to evade limits.
 - Run scripts/fmt.sh, scripts/check.sh, scripts/test.sh -race, scripts/fuzz.sh

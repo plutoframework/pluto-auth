@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bounded auth mutations in disposable copies; no comprehensive coverage claim."""
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import tempfile
@@ -72,6 +73,46 @@ MUTATIONS = [
         "./methods/password",
         "TestRejectMalformedCosts",
     ),
+    (
+        "unverified local password accepted",
+        "methods/password/service.go",
+        "!account.Verified || account.Disabled",
+        "false || account.Disabled",
+        "./methods/password",
+        "TestServiceLifecycle",
+    ),
+    (
+        "local password comparison ignored",
+        "methods/password/service.go",
+        "if !valid || lookupErr != nil ||",
+        "if false && !valid || lookupErr != nil ||",
+        "./methods/password",
+        "TestServiceLifecycle",
+    ),
+    (
+        "challenge purposes conflated",
+        "methods/password/identifier.go",
+        'string(purpose) + "\\x00" + token',
+        '"\\x00" + token',
+        "./methods/password",
+        "TestChallengePurposeSeparation",
+    ),
+    (
+        "credential fence ignored",
+        "stores/postgres/local_sessions.go",
+        "session.CredentialVersion != row.CredentialVersion",
+        "false && session.CredentialVersion != row.CredentialVersion",
+        "./stores/postgres",
+        "TestPostgresStaleSignInFence",
+    ),
+    (
+        "reset session revocation omitted",
+        "stores/postgres/local.go",
+        "return q.DeleteSubjectSessions(ctx, id)",
+        "return nil // mutation: skip revocation",
+        "./stores/postgres",
+        "TestPostgresLocalLifecycle",
+    ),
 ]
 
 
@@ -82,7 +123,9 @@ def execute(args, cwd, timeout):
 
 
 def main():
-    baseline = execute(["./scripts/test.sh"], ROOT, 60)
+    if not os.environ.get("PLUTO_AUTH_TEST_DATABASE_URL"):
+        raise SystemExit("Set PLUTO_AUTH_TEST_DATABASE_URL to a disposable DB; SQL mutants must run")
+    baseline = execute(["./scripts/test.sh"], ROOT, 120)
     if baseline.returncode:
         raise SystemExit(baseline.stdout + baseline.stderr)
 

@@ -35,3 +35,13 @@ CI actions are separately pinned/reviewed; a small manifest is not an audit.
 The `upstream` Git remote is read-only project provenance. Publish Pluto changes
 only to `origin` at github.com/plutoframework/pluto-auth. Retain this document and
 attribution if code is moved or split into another repository.
+
+The local credential lifecycle, ASCII email policy, purpose-separated challenges,
+POST-only adapter and optional account/challenge/session-binding migration are
+new Pluto implementations. Hash replacement reuses the bounded Argon2id hasher
+and retains stronger stored cost/salt/key dimensions; no new password algorithm
+or social/OIDC provider was forked. Credential versions extend session rotation
+without changing the original session-only Postgres schema/API. Transaction
+rollback, concurrent challenge consumption and old-password issuance barriers are
+covered by disposable Postgres tests. A focused maintainer self-review used the
+security-review skill; it is not independent security assurance.
