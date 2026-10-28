@@ -32,12 +32,26 @@ func (m *Manager) Start(
 ) (IssuedSession, error) {
 	now := m.config.Clock().UTC()
 
-	return m.issue(ctx, subjectID, now, now.Add(m.config.TTL))
+	return m.issue(ctx, subjectID, 0, now, now.Add(m.config.TTL))
+}
+
+// StartVersioned issues through a store that atomically checks the credential
+// version and account eligibility. Use only after credential verification. A
+// plain SessionStore need not enforce this fence; use a local lifecycle store.
+func (m *Manager) StartVersioned(
+	ctx context.Context, subjectID string, version int64,
+) (IssuedSession, error) {
+	if version <= 0 {
+		return IssuedSession{}, ErrUnauthenticated
+	}
+	now := m.config.Clock().UTC()
+	return m.issue(ctx, subjectID, version, now, now.Add(m.config.TTL))
 }
 
 func (m *Manager) issue(
 	ctx context.Context,
 	subjectID string,
+	version int64,
 	now time.Time,
 	expires time.Time,
 ) (IssuedSession, error) {
@@ -62,11 +76,12 @@ func (m *Manager) issue(
 	}
 
 	session := Session{
-		ID:         rand.Text(),
-		SubjectID:  subjectID,
-		CreatedAt:  now,
-		LastSeenAt: now,
-		ExpiresAt:  expires,
+		ID:                rand.Text(),
+		CredentialVersion: version,
+		SubjectID:         subjectID,
+		CreatedAt:         now,
+		LastSeenAt:        now,
+		ExpiresAt:         expires,
 	}
 
 	if err := m.store.Create(ctx, digest, session); err != nil {
@@ -159,5 +174,11 @@ func (m *Manager) Rotate(
 		return IssuedSession{}, ErrUnauthenticated
 	}
 
-	return m.issue(ctx, session.SubjectID, now, session.ExpiresAt)
+	return m.issue(
+		ctx,
+		session.SubjectID,
+		session.CredentialVersion,
+		now,
+		session.ExpiresAt,
+	)
 }
