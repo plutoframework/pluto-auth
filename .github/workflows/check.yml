@@ -1,0 +1,55 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+        env:
+          POSTGRES_USER: pluto
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: pluto_auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pluto -d pluto_auth_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PLUTO_AUTH_TEST_DATABASE_URL: postgres://pluto:ci-test-only@localhost:5432/pluto_auth_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.25.5"
+          cache-dependency-path: "**/go.sum"
+      - name: Install pinned linter
+        # The linter's build toolchain is separate from the library's target.
+        run: GOTOOLCHAIN=go1.26.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+      - run: ./scripts/check.sh
+      - run: ./scripts/test.sh -race
+      - run: ./scripts/fuzz.sh
+      - run: python3 scripts/mutation-smoke.py
+      - name: Verify sqlc output
+        working-directory: stores/postgres
+        run: |
+          GOWORK=off go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0 generate
+          git diff --exit-code -- internal/db
+      - name: Verify standalone published module graphs
+        run: |
+          for module in . methods/password stores/postgres; do
+            (cd "$module" && GOWORK=off go mod tidy -diff)
+            (cd "$module" && GOWORK=off go test ./...)
+          done

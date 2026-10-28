@@ -5,5 +5,3 @@ use (
 	./methods/password
 	./stores/postgres
 )
-
-replace github.com/plutoframework/pluto-auth v0.0.0 => .

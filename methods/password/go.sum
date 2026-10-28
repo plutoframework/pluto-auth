@@ -1,3 +1,5 @@
+github.com/plutoframework/pluto-auth v0.0.0-20261028012201-d7960b0aef3f h1:+jvihy4XwM5rWV7YdQNexqIL5UAxEdNCXF3gjNN0U6M=
+github.com/plutoframework/pluto-auth v0.0.0-20261028012201-d7960b0aef3f/go.mod h1:HQZU04XbBCfkfALpO4twiunihATxfNdH7jIrzpBAyDA=
 golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
 golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
 golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
