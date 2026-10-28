@@ -1,14 +1,4 @@
-specs
-.vscode
-.kiro
-.cursor
-.DS_Store
-tmp/
-.air.toml
-.limen/
+*.test
+coverage.*
 .env
-limen-publish
-go.work
-go.work.sum
-examples/kitchen/
-.pnpm*
+.DS_Store

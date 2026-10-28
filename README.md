@@ -1,125 +1,110 @@
-<p align="center">
-  <a href="https://limenauth.dev">
-    <img src="./banner.svg" alt="Limen — Composable authentication for Go" width="640" />
-  </a>
-</p>
+# Pluto Auth
 
-<p align="center">
-  A modern, composable authentication library for Go, inspired by <a href="https://www.better-auth.com/">better-auth</a>.
-</p>
+An independent, deliberately narrow hard fork of
+[Limen](https://github.com/thecodearcher/limen) for Pluto APIs.
 
-<p align="center">
-  <a href="https://limenauth.dev">Documentation</a>
-  ·
-  <a href="https://github.com/thecodearcher/limen/issues">Issues</a>
-  ·
-  <a href="https://x.com/limenauth">X (@limenauth)</a>
-</p>
+Module: `github.com/plutoframework/pluto-auth` (Go 1.25.5+).
+Pre-release; no independent security audit or compatibility guarantee.
 
-<p align="center">
-  <a href="https://pkg.go.dev/github.com/thecodearcher/limen"><img src="https://img.shields.io/badge/reference-pkg.go.dev-ffffff?style=flat&colorA=000000&colorB=000000&logo=go&logoColor=white" alt="Go reference" /></a>
-  <a href="https://www.npmjs.com/package/limen-auth"><img src="https://img.shields.io/npm/v/limen-auth?style=flat&colorA=000000&colorB=000000&logo=npm&logoColor=white" alt="npm version" /></a>
-  <a href="https://github.com/thecodearcher/limen/stargazers"><img src="https://img.shields.io/github/stars/thecodearcher/limen?style=flat&colorA=000000&colorB=000000&logo=github" alt="GitHub stars" /></a>
+The active library provides opaque sessions, typed persistence and net/http
+cookie authentication. Optional modules add local password sign-in and a
+Postgres store. Authentication establishes identity; application membership,
+resource policies and [Pluto RBAC](https://github.com/plutoframework/pluto-rbac)
+decide authorization. No hidden globals, startup DDL or automatic routes.
 
-</p>
+## Browse the implementation
 
-Limen is a modular authentication library for Go that takes a **plugin-first** approach — the core ships with interfaces, session management, and security primitives, while every authentication method lives in its own importable Go module. You compose exactly the auth stack your application needs without pulling in code/dependencies you don't use.
+- `session.go`, `manager.go`, `token.go`: session contract, lifecycle and tokens.
+- `httpauth/`: net/http middleware, exact Origin guard and secure host cookies.
+- `stores/memory/`: bounded store for tests and single-process development.
+- `stores/postgres/`: independent pgx/sqlc module, schema and generated queries.
+- `methods/password/`: independent Argon2id module and typed sign-in service.
+- `docs/SECURITY-MODEL.md`: boundaries, defaults and deliberate limitations.
+- `docs/PROVENANCE.md`: upstream baseline, attribution and fork decisions.
 
-Out of the box, Limen provides:
+Core/httpauth/memory have no third-party dependencies. Password hashing uses
+golang.org/x/crypto; Postgres uses pgx. Tooling dependencies, generated sqlc
+sources and optional modules do not become core runtime dependencies. The
+checked-in go.work joins modules for development; published modules contain
+actual version requirements without local filesystem replacements.
 
-- Credential/password authentication
-- OAuth 2.0
-- Two-factor authentication
-- Session management
-- ...and more
-
-Bring your own database, bring your own framework — Limen adapts to your stack, not the other way around.
-
-## Documentation
-
-Full guides, configuration reference, and plugin documentation are available at **[limenauth.dev](https://limenauth.dev)**.
-
-## Requirements
-
-- Go 1.25+
-
-## Installation
-
-```bash
-go get github.com/thecodearcher/limen
-```
-
-Then add the adapter and plugins your application needs:
-
-```bash
-go get github.com/thecodearcher/limen/adapters/gorm
-go get github.com/thecodearcher/limen/plugins/credential-password
-```
-
-## Quick Start
+## Session setup
 
 ```go
-package main
-
-import (
-	"log"
-	"net/http"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-
-	"github.com/thecodearcher/limen"
-	gormadapter "github.com/thecodearcher/limen/adapters/gorm"
-	credentialpassword "github.com/thecodearcher/limen/plugins/credential-password"
-)
-
-func main() {
-	db, err := gorm.Open(postgres.Open("your-dsn"), &gorm.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	auth, err := limen.New(&limen.Config{
-		BaseURL:  "http://localhost:8080",
-		Database: gormadapter.New(db),
-		Secret:   []byte("your-32-byte-secret-key-here!!!!"),
-		Plugins: []limen.Plugin{
-			credentialpassword.New(),
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/api/auth/", auth.Handler())
-
-	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+store, err := memory.New(1000)
+if err != nil {
+    return err
 }
+
+manager, err := auth.New(store, auth.DefaultConfig())
+if err != nil {
+    return err
+}
+
+transport, err := httpauth.New(manager, httpauth.Config{
+    TrustedOrigins: []string{"https://app.example.com"},
+})
+if err != nil {
+    return err
+}
+
+router.Handle("/api/profile", transport.Require(profileHandler))
 ```
 
-Alternatively, set the `LIMEN_SECRET` environment variable and omit the `Secret` from the struct.
+Imports are `auth "github.com/plutoframework/pluto-auth"`, plus its `/httpauth`
+and `/stores/memory` packages. Both Chi and http.ServeMux accept the handler.
+Read the verified session with `httpauth.FromContext(request.Context())`.
+Session metadata contains no roles, permissions or trusted tenant selection.
 
-For a more complete example with OAuth providers, two-factor auth, and Gin integration, see the [examples](examples/).
+Manager.Start must follow credential verification. It is not a public login
+operation. For local passwords, construct methods/password.NewAuthenticator
+with your CredentialStore, Hasher, SessionIssuer (the manager), and a real
+AttemptLimiter. SignIn returns an IssuedSession on success; send it with
+transport.WriteCookie, never as a raw token in JSON. Authenticator does not
+perform registration, account recovery or credential updates.
 
-For full configuration options, usage, and plugin APIs, visit **[limenauth.dev](https://limenauth.dev)**.
+Wrap login handlers in transport.Guard for Origin validation. Require already
+includes it for authenticated routes. Logout must revoke server state before
+ClearCookie; cookie clearing alone does not revoke a stolen token. Do not mutate
+business state in GET/HEAD/OPTIONS handlers. HTTPS is required for the cookie.
+Credentialed CORS and proxy trust are explicit application configuration.
 
-## Contributing
+## Postgres
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Import `github.com/plutoframework/pluto-auth/stores/postgres` separately.
+Construct postgres.New(pool) with a pgxpool.Pool. Apply schema.sql through your
+application migration system before serving requests; no constructor applies it.
+Schedule Store.PruneExpired explicitly. The application owns its user table and
+CredentialStore implementation, avoiding a generic untyped database abstraction.
 
-Curious what's being built, what's open for contribution, and what's out of scope? See [ROADMAP.md](./ROADMAP.md). If you're planning to contribute, check there and open an issue first.
+## Local checks
 
+```sh
+mise trust
+mise install
+./scripts/fmt.sh
+./scripts/check.sh
+./scripts/test.sh -race
+./scripts/fuzz.sh
+python3 scripts/mutation-smoke.py
+```
 
-## Security
+golangci-lint 2.15.0 combines gofumpt, gci, golines (80-column default) and
+wsl_v5. The target is configurable in .golangci.yml. Files must remain under
+1,000 lines; split files rather than compressing code.
 
-Found a security issue? Please **do not** open a public issue. Email
-[security@limenauth.dev](mailto:security@limenauth.dev) instead. See
-[SECURITY.md](SECURITY.md) for full details on our disclosure process.
+The Postgres integration test creates/drops a random schema in the explicitly
+configured database. Use a disposable local or CI database only:
 
-## License
+```sh
+export PLUTO_AUTH_TEST_DATABASE_URL='postgres://user:password@localhost/testdb'
+./scripts/test.sh -race
+```
 
-MIT License — see [LICENSE](LICENSE) for details.
+Without that variable, the integration test reports a skip. CI supplies a real
+Postgres service and runs it. Regenerate SQL via `mise run generate` (sqlc
+1.30.0); sqlc is a development tool, not a runtime dependency.
 
-
+Original MIT license and attribution are preserved. The upstream source and
+tests remain available at tag `limen-baseline-a691ec9`; this is intentionally
+not a drop-in replacement for Limen or a promise to maintain its plugin suite.

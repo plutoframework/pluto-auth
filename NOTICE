@@ -1,0 +1,11 @@
+Pluto Auth is an independent hard fork of Limen.
+
+Upstream: https://github.com/thecodearcher/limen
+Baseline: a691ec98c6c28ac26c2077e4f8f74b9fe7f4d86a
+Copyright (c) 2025 Brian Iyoha. Licensed under the MIT License.
+
+Pluto changes and additions: Copyright (c) 2026 Pluto Framework contributors.
+Distributed under the MIT License. See LICENSE and docs/PROVENANCE.md.
+
+Pluto Auth is independently maintained. This fork does not imply endorsement
+or security review by the upstream author.

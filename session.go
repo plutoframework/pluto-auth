@@ -1,159 +1,78 @@
-package limen
+package auth
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
+	"errors"
 	"time"
 )
 
+var (
+	ErrNotFound        = errors.New("auth: session not found")
+	ErrUnauthenticated = errors.New("auth: unauthenticated")
+	ErrInvalidConfig   = errors.New("auth: invalid configuration")
+	ErrInvalidSubject  = errors.New("auth: invalid subject")
+)
+
+// Digest is a SHA-256 digest of a cryptographically random session token.
+// Stores persist this digest, never the bearer token.
+type Digest [32]byte
+
+// Session contains identity and lifetime metadata, never roles or credentials.
 type Session struct {
-	ID         any            `json:"id,omitempty"`
-	Token      string         `json:"token"`
-	UserID     any            `json:"user_id"`
-	CreatedAt  time.Time      `json:"created_at"`
-	ExpiresAt  time.Time      `json:"expires_at"`
-	LastAccess time.Time      `json:"last_access"`
-	Metadata   map[string]any `json:"metadata,omitempty"`
-	raw        map[string]any
+	ID         string    `json:"id"`
+	SubjectID  string    `json:"subject_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
 }
 
-// Raw returns the session raw data as returned from storage
-func (s Session) Raw() map[string]any {
-	return s.raw
+// IssuedSession is returned only at issuance. Token must never be logged.
+// JSON encoding intentionally omits it; use the HTTP cookie adapter.
+type IssuedSession struct {
+	Session Session `json:"session"`
+	Token   string  `json:"-"`
 }
 
-// IsExpired checks if the session has expired
-func (s *Session) IsExpired(idleTimeout time.Duration) bool {
-	if idleTimeout == 0 {
-		return time.Now().After(s.ExpiresAt)
+// SessionStore operations must honor cancellation and be concurrency safe.
+// Use atomically rejects missing, expired, or idle sessions and updates activity.
+// It must not recreate deleted sessions or extend ExpiresAt. Activity timestamps
+// must never move backwards. Revocation affects subsequent Use calls; it cannot
+// cancel requests that already authenticated. Delete operations are idempotent.
+type SessionStore interface {
+	Create(context.Context, Digest, Session) error
+	Use(context.Context, Digest, time.Time, time.Duration) (Session, error)
+	// Consume atomically validates and deletes a session for one-use rotation.
+	Consume(context.Context, Digest, time.Time, time.Duration) (Session, error)
+	Delete(context.Context, Digest) error
+	DeleteSubject(context.Context, string) error
+}
+
+// Config is explicit and copied by New. Clock must be concurrency safe.
+// ExpiresAt is always an absolute deadline, independent of activity.
+type Config struct {
+	TTL         time.Duration
+	IdleTimeout time.Duration
+	Clock       func() time.Time
+}
+
+func DefaultConfig() Config {
+	return Config{
+		TTL:         24 * time.Hour,
+		IdleTimeout: 30 * time.Minute,
+		Clock:       time.Now,
 	}
-	return time.Now().After(s.ExpiresAt) || time.Now().After(s.LastAccess.Add(idleTimeout))
 }
 
-// ShouldExtendExpiration checks if the session should be extended
-func (s *Session) ShouldExtendExpiration(expiresIn, updateAge time.Duration) bool {
-	if updateAge == 0 {
+// Active reports whether a record is inside its absolute and idle deadlines.
+// It is exported so storage adapters can share the exact boundary semantics.
+func Active(session Session, now time.Time, idle time.Duration) bool {
+	if session.ID == "" || session.SubjectID == "" {
 		return false
 	}
 
-	lastExtendedAt := s.ExpiresAt.Add(-expiresIn)
-	nextExtensionAt := lastExtendedAt.Add(updateAge)
-	now := time.Now()
-
-	return now.After(nextExtensionAt) || now.Equal(nextExtensionAt)
-}
-
-type SessionSchema struct {
-	BaseSchema
-}
-
-type SchemaConfigSessionOption func(*SchemaConfig, *SessionSchema)
-
-func newDefaultSessionSchema(c *SchemaConfig, opts ...SchemaConfigSessionOption) *SessionSchema {
-	schema := &SessionSchema{
-		BaseSchema: BaseSchema{},
+	if now.Before(session.CreatedAt) || !now.Before(session.ExpiresAt) {
+		return false
 	}
 
-	for _, opt := range opts {
-		opt(c, schema)
-	}
-
-	return schema
-}
-
-func (s *SessionSchema) GetSoftDeleteField() string {
-	// sessions should not have a soft delete field
-	return ""
-}
-
-// SessionData returns the value the session holds for the logical field.
-func (s *SessionSchema) SessionData(session *Session, field SchemaField) (any, error) {
-	column := s.GetField(field)
-	if column == "" {
-		return nil, fmt.Errorf("%w: %q", ErrUnknownSessionField, field)
-	}
-	return session.Raw()[column], nil
-}
-
-// sessionColumns resolves a field-keyed session payload to database columns,
-// rejecting fields not registered on the sessions schema.
-func (s *SessionSchema) sessionColumns(payload map[SchemaField]any) (map[string]any, error) {
-	columns := make(map[string]any, len(payload))
-	for field, value := range payload {
-		column := s.GetField(field)
-		if column == "" {
-			return nil, fmt.Errorf("%w: %q", ErrUnknownSessionField, field)
-		}
-		columns[column] = value
-	}
-	return columns, nil
-}
-
-func (s *SessionSchema) GetUserIDField() string {
-	return s.GetField(SessionSchemaUserIDField)
-}
-
-func (s *SessionSchema) GetTokenField() string {
-	return s.GetField(SessionSchemaTokenField)
-}
-
-func (s *SessionSchema) GetCreatedAtField() string {
-	return s.GetField(SessionSchemaCreatedAtField)
-}
-
-func (s *SessionSchema) GetExpiresAtField() string {
-	return s.GetField(SessionSchemaExpiresAtField)
-}
-
-func (s *SessionSchema) GetLastAccessField() string {
-	return s.GetField(SessionSchemaLastAccessField)
-}
-
-func (s *SessionSchema) GetMetadataField() string {
-	return s.GetField(SessionSchemaMetadataField)
-}
-
-func (s *SessionSchema) FromStorage(data map[string]any) Model {
-	session := &Session{
-		ID:         data[s.GetIDField()],
-		Token:      data[s.GetTokenField()].(string),
-		UserID:     data[s.GetUserIDField()],
-		CreatedAt:  data[s.GetCreatedAtField()].(time.Time),
-		ExpiresAt:  data[s.GetExpiresAtField()].(time.Time),
-		LastAccess: data[s.GetLastAccessField()].(time.Time),
-		raw:        data,
-	}
-
-	// Parse Metadata if it exists and is a string (JSON)
-	if metadataValue, exists := data[s.GetMetadataField()]; exists && metadataValue != nil {
-		if metadataStr, ok := metadataValue.(string); ok && metadataStr != "" {
-			var metadata map[string]any
-			if err := json.Unmarshal([]byte(metadataStr), &metadata); err == nil {
-				session.Metadata = metadata
-			}
-		} else if metadataMap, ok := metadataValue.(map[string]any); ok {
-			session.Metadata = metadataMap
-		}
-	}
-
-	return session
-}
-
-func (s *SessionSchema) ToStorage(data Model) map[string]any {
-	session := data.(*Session)
-	result := map[string]any{
-		s.GetTokenField():      session.Token,
-		s.GetUserIDField():     session.UserID,
-		s.GetCreatedAtField():  session.CreatedAt,
-		s.GetExpiresAtField():  session.ExpiresAt,
-		s.GetLastAccessField(): session.LastAccess,
-	}
-
-	if session.Metadata != nil {
-		if metadataJSON, err := json.Marshal(session.Metadata); err == nil {
-			result[s.GetMetadataField()] = string(metadataJSON)
-		}
-	}
-
-	return result
+	return idle == 0 || now.Before(session.LastSeenAt.Add(idle))
 }

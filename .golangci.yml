@@ -1,126 +1,54 @@
 version: "2"
+
 run:
+  timeout: 3m
   modules-download-mode: readonly
+
 linters:
-  default: standard
+  default: none
   enable:
-    - bodyclose
-    - dogsled
-    - dupl
-    - exhaustive
-    - funlen
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - goprintffuncname
-    - gosec
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - rowserrcheck
+    - govet
+    - ineffassign
     - staticcheck
-    - unconvert
-    - unparam
-    - whitespace
+    - unused
+    - wsl_v5
   settings:
-    dupl:
-      threshold: 100
-    errcheck:
-      # HTTP handlers rarely recover from ResponseWriter failures; Responder returns error for callers that need it.
-      exclude-functions:
-        - (*github.com/thecodearcher/limen.Responder).JSON
-        - (*github.com/thecodearcher/limen.Responder).Error
-        - (*github.com/thecodearcher/limen.Responder).SessionResponse
-        - (*github.com/thecodearcher/limen.Responder).JSONWithSession
-        - (*github.com/thecodearcher/limen.Responder).ErrorWithSession
-        - (*github.com/thecodearcher/limen.Responder).Redirect
-        - (*github.com/thecodearcher/limen.Responder).RedirectWithSession
-    exhaustive:
-      default-signifies-exhaustive: true
-    funlen:
-      lines: 100
-      statements: 50
-    goconst:
-      min-len: 4
-      min-occurrences: 4
-      # Defaults and wire keys are clearer as literals than package constants.
-      ignore-string-values: "^(json|user|http://localhost:8080|/auth|limen_session)$"
-    gocritic:
-      disabled-checks:
-        - octalLiteral
-        - whyNoLint
-        - wrapperFunc
-        - unnamedResult
-        - paramTypeCombine
-        - rangeValCopy
-        - hugeParam
-      enabled-tags:
-        - diagnostic
-        - experimental
-        - opinionated
-        - performance
-        - style
-    gocyclo:
-      min-complexity: 17
-    gosec:
-      # G117 flags normal auth DTO fields (AccessToken, Secret, etc.).
-      # G124 flags cookie constructors before Secure/HttpOnly/SameSite are applied by config.
-      excludes:
-        - G117
-        - G124
-    misspell:
-      locale: US
+    wsl_v5:
+      # Keep an assignment beside its immediate error check or first use.
+      # Separate unrelated work, completed blocks, and the final return.
+      default: default
+      allow-first-in-block: true
+      allow-whole-block: false
+      cuddle-max-statements: 1
+      branch-max-lines: 2
+      enable:
+        - after-block
+        - after-expr
   exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    rules:
-      - linters:
-          - dupl
-          - errcheck
-          - funlen
-          - goconst
-          - gocyclo
-          - gosec
-          - unparam
-        path: _test\.go
-      - linters:
-          - gocyclo
-          - goconst
-          - gosec
-        path: testing_support\.go
-      - linters:
-          - dupl
-          - goconst
-        path: _introspect\.go
-      - linters:
-          - funlen
-          - gocyclo
-          - goconst
-          - gosec
-          - staticcheck
-          - gocritic
-        path: examples/
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    generated: strict
+    presets: []
+
 formatters:
   enable:
-    - gofmt
-    - goimports
+    - gci
+    - gofumpt
+    - golines
   settings:
-    goimports:
-      local-prefixes:
-        - github.com/thecodearcher/limen
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - prefix(github.com/plutoframework/pluto-auth)
+        - default
+    gofumpt:
+      module-path: github.com/plutoframework/pluto-auth
+    golines:
+      max-len: 80
+      tab-len: 4
+      shorten-comments: false
   exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    generated: strict
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
