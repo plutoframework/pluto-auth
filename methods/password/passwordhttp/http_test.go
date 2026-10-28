@@ -12,7 +12,7 @@ func TestStrictBoundedDecode(t *testing.T) {
 		`{"email":"a@example.com","role":"admin"}`,
 		`{"email":"a@example.com","email":"b@example.com"}`,
 		`{"email":"a@example.com","EMAIL":"b@example.com"}`,
-		`null`, `[]`, `{"email":12}`, `{"email":"` + strings.Repeat("a", 8192) + `"}`,
+		`{"email":"a` + string([]byte{0xff}) + `@example.com"}`, `null`, `[]`, `{"email":12}`, `{"email":"` + strings.Repeat("a", 8192) + `"}`,
 	} {
 		r := httptest.NewRequest("POST", "/", strings.NewReader(body))
 		r.Header.Set("Content-Type", "application/json")
