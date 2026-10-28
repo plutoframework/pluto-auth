@@ -66,6 +66,12 @@ func validCosts(memory, iterations uint32, parallel uint8) bool {
 }
 
 func (h *Hasher) Hash(ctx context.Context, password []byte) (string, error) {
+	return h.hash(ctx, password, 16, 32)
+}
+
+func (h *Hasher) hash(ctx context.Context, password []byte,
+	saltBytes int, keyBytes uint32,
+) (string, error) {
 	if len(password) == 0 || len(password) > MaxPasswordBytes {
 		return "", ErrPasswordLength
 	}
@@ -76,14 +82,14 @@ func (h *Hasher) Hash(ctx context.Context, password []byte) (string, error) {
 
 	defer h.release()
 
-	salt := make([]byte, 16)
+	salt := make([]byte, saltBytes)
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("password: generate salt: %w", err)
 	}
 
 	config := h.config
 	key := argon2.IDKey(password, salt, config.Iterations,
-		config.MemoryKiB, config.Parallelism, 32)
+		config.MemoryKiB, config.Parallelism, keyBytes)
 
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -129,6 +135,8 @@ func (h *Hasher) Verify(
 	return subtle.ConstantTimeCompare(key, parsed.key) == 1, nil
 }
 
+// NeedsRehash reports parameter differences, including stronger stored costs.
+// For a migration use HashAtLeast, not Hash, to avoid downgrading those costs.
 func (h *Hasher) NeedsRehash(encoded string) (bool, error) {
 	parsed, err := parse(encoded)
 	if err != nil {
@@ -139,6 +147,26 @@ func (h *Hasher) NeedsRehash(encoded string) (bool, error) {
 		parsed.iterations != h.config.Iterations ||
 		parsed.parallel != h.config.Parallelism ||
 		len(parsed.salt) != 16 || len(parsed.key) != 32, nil
+}
+
+// HashAtLeast retains every encoded cost dimension during password replacement.
+// It never rewrites an existing hash during sign-in.
+func (h *Hasher) HashAtLeast(ctx context.Context, value []byte,
+	encoded string,
+) (string, error) {
+	info, err := parse(encoded)
+	if err != nil {
+		return "", err
+	}
+
+	config := h.config
+	config.MemoryKiB = max(config.MemoryKiB, info.memory)
+	config.Iterations = max(config.Iterations, info.iterations)
+	config.Parallelism = max(config.Parallelism, info.parallel)
+	stronger := &Hasher{config: config, slots: h.slots}
+
+	return stronger.hash(ctx, value, max(16, len(info.salt)),
+		uint32(max(32, len(info.key))))
 }
 
 func (h *Hasher) acquire(ctx context.Context) error {
