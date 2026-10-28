@@ -7,7 +7,7 @@ Module: `github.com/plutoframework/pluto-auth` (Go 1.25.5+).
 Pre-release; no independent security audit or compatibility guarantee.
 
 The active library provides opaque sessions, typed persistence and net/http
-cookie authentication. Optional modules add local password sign-in and a
+cookie authentication (with opt-in opaque bearer credentials). Optional modules add local password sign-in and a
 Postgres store. Authentication establishes identity; application membership,
 resource policies and [Pluto RBAC](https://github.com/plutoframework/pluto-rbac)
 decide authorization. No hidden globals, startup DDL or automatic routes.
@@ -64,7 +64,9 @@ transport.WriteCookie, never as a raw token in JSON. Authenticator does not
 perform registration, account recovery or credential updates.
 
 Wrap login handlers in transport.Guard for Origin validation. Require already
-includes it for authenticated routes. Logout must revoke server state before
+includes it for cookie-authenticated routes. Set Config.AllowBearer explicitly
+for API clients; mixed cookie/Authorization or duplicate credentials are rejected.
+Bearer credentials are not ambient cookies and do not require an Origin. Logout must revoke server state before
 ClearCookie; cookie clearing alone does not revoke a stolen token. Do not mutate
 business state in GET/HEAD/OPTIONS handlers. HTTPS is required for the cookie.
 Credentialed CORS and proxy trust are explicit application configuration.

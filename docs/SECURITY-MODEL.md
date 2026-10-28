@@ -54,7 +54,12 @@ production-cookie fallback. Cookie-authenticated unsafe methods require one exac
 allowlisted Origin. Missing, null, multiple and untrusted origins fail closed.
 Forwarded headers cannot override the origin allowlist.
 
-Require includes the Origin guard. Apply Guard to login and all unauthenticated
+Require includes the Origin guard for cookie credentials. Explicit bearer
+credentials are opt-in (AllowBearer defaults false); unsafe bearer requests do
+not require Origin because those credentials are not automatically attached by
+browsers. Duplicate Authorization headers and any combination of session cookie
+and Authorization fail closed. Token extracts the same credential for revocation
+and never authenticates it on its own. Apply Guard to login and all unauthenticated
 state-changing authentication routes as well. GET/HEAD/OPTIONS must never perform
 business mutations. Configure credentialed CORS and TLS/proxy trust separately;
 this package does not reflect arbitrary origins or provide CORS middleware.

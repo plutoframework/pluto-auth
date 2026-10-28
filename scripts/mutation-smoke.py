@@ -9,6 +9,14 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 MUTATIONS = [
     (
+        "bearer enabled without opt in",
+        "httpauth/http.go",
+        "if !t.allowBearer || len(headers) != 1 {",
+        "if false && !t.allowBearer || len(headers) != 1 {",
+        "./httpauth",
+        "TestBearerOptInAndAmbiguousCredentials",
+    ),
+    (
         "absolute expiry ignored",
         "session.go",
         "now.Before(session.CreatedAt) || !now.Before(session.ExpiresAt)",

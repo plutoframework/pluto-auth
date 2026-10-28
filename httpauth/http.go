@@ -22,15 +22,19 @@ type Config struct {
 	// Explicit HTTP loopback origins support local development only. Session
 	// cookies remain Secure, so use local HTTPS for browser authentication.
 	TrustedOrigins []string
+	// AllowBearer enables explicit Authorization credentials for API clients.
+	// Cookie and Authorization credentials together are always rejected.
+	AllowBearer bool
 	// WriteError may supply the application's JSON envelope. It must not
 	// expose credentials or internal storage errors to the client.
 	WriteError func(http.ResponseWriter, *http.Request, int, string)
 }
 
 type Transport struct {
-	manager    *auth.Manager
-	origins    map[string]struct{}
-	writeError func(http.ResponseWriter, *http.Request, int, string)
+	manager     *auth.Manager
+	allowBearer bool
+	origins     map[string]struct{}
+	writeError  func(http.ResponseWriter, *http.Request, int, string)
 }
 
 func New(manager *auth.Manager, config Config) (*Transport, error) {
@@ -39,9 +43,10 @@ func New(manager *auth.Manager, config Config) (*Transport, error) {
 	}
 
 	transport := &Transport{
-		manager:    manager,
-		origins:    make(map[string]struct{}),
-		writeError: config.WriteError,
+		manager:     manager,
+		allowBearer: config.AllowBearer,
+		origins:     make(map[string]struct{}),
+		writeError:  config.WriteError,
 	}
 
 	if transport.writeError == nil {
@@ -99,47 +104,94 @@ func (t *Transport) Guard(next http.Handler) http.Handler {
 	})
 }
 
-// Require authenticates cookies and installs a session in the request context.
-// Authentication never grants roles, permissions, or tenant membership.
+// Require authenticates a session and installs it in the request context.
+// Unsafe cookie requests require a trusted Origin. Explicit bearer credentials
+// are opt-in and are not ambient browser credentials. Mixed credentials fail.
 func (t *Transport) Require(next http.Handler) http.Handler {
-	return t.Guard(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var token string
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
 
-			count := 0
+		token, cookie, err := t.credentials(r)
+		if err != nil {
+			t.writeError(w, r, http.StatusUnauthorized, "unauthenticated")
 
-			for _, cookie := range r.Cookies() {
-				if cookie.Name == CookieName {
-					token = cookie.Value
-					count++
-				}
-			}
+			return
+		}
 
-			if count != 1 {
-				t.writeError(w, r, http.StatusUnauthorized, "unauthenticated")
+		authenticated := http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				session, err := t.manager.Authenticate(r.Context(), token)
+				if err != nil {
+					status := http.StatusServiceUnavailable
+					code := "authentication_unavailable"
 
-				return
-			}
+					if errors.Is(err, auth.ErrUnauthenticated) {
+						status = http.StatusUnauthorized
+						code = "unauthenticated"
+					}
 
-			session, err := t.manager.Authenticate(r.Context(), token)
-			if err != nil {
-				status := http.StatusServiceUnavailable
-				code := "authentication_unavailable"
+					t.writeError(w, r, status, code)
 
-				if errors.Is(err, auth.ErrUnauthenticated) {
-					status = http.StatusUnauthorized
-					code = "unauthenticated"
+					return
 				}
 
-				t.writeError(w, r, status, code)
+				ctx := context.WithValue(r.Context(), sessionKey{}, session)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			},
+		)
+		if cookie {
+			t.Guard(authenticated).ServeHTTP(w, r)
 
-				return
-			}
+			return
+		}
 
-			ctx := context.WithValue(r.Context(), sessionKey{}, session)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		}),
-	)
+		authenticated.ServeHTTP(w, r)
+	})
+}
+
+// Token extracts the same unambiguous credential accepted by Require, for
+// server-side revocation. It does not authenticate it. Never log the result.
+func (t *Transport) Token(r *http.Request) (string, error) {
+	token, _, err := t.credentials(r)
+	return token, err
+}
+
+func (t *Transport) credentials(r *http.Request) (string, bool, error) {
+	var token string
+
+	count := 0
+
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == CookieName {
+			token = cookie.Value
+			count++
+		}
+	}
+
+	headers := r.Header.Values("Authorization")
+	if count > 1 || len(headers) > 1 || (count != 0 && len(headers) != 0) {
+		return "", false, auth.ErrUnauthenticated
+	}
+
+	if count == 1 {
+		if token == "" {
+			return "", false, auth.ErrUnauthenticated
+		}
+
+		return token, true, nil
+	}
+
+	if !t.allowBearer || len(headers) != 1 {
+		return "", false, auth.ErrUnauthenticated
+	}
+
+	scheme, token, found := strings.Cut(headers[0], " ")
+	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" ||
+		strings.TrimSpace(token) != token {
+		return "", false, auth.ErrUnauthenticated
+	}
+
+	return token, false, nil
 }
 
 func FromContext(ctx context.Context) (auth.Session, bool) {
