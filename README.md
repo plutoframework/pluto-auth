@@ -31,37 +31,123 @@ go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
 go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
 ```
 
-### 2. Start with session construction
+### 2. Protect an HTTP route
 
-Save this as `cmd/session/main.go`, then run `go run ./cmd/session`:
+This complete in-process walkthrough mounts a protected handler and exercises
+anonymous access, a trusted synthetic session and revocation. Save it as
+`cmd/session/main.go` and run `go run ./cmd/session`, or run
+`go run ./examples/protected-http` from this repository.
+
+<!-- example-source: examples/protected-http/main.go -->
 
 ```go
+// An in-process HTTP walkthrough with trusted synthetic session issuance.
 package main
 
 import (
-    "fmt"
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 
-    auth "github.com/plutoframework/pluto-auth"
-    "github.com/plutoframework/pluto-auth/stores/memory"
+	auth "github.com/plutoframework/pluto-auth"
+	"github.com/plutoframework/pluto-auth/httpauth"
+	"github.com/plutoframework/pluto-auth/stores/memory"
 )
 
+func application() (http.Handler, *auth.Manager, error) {
+	store, err := memory.New(100)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	manager, err := auth.New(store, auth.DefaultConfig())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	transport, err := httpauth.New(manager, httpauth.Config{
+		TrustedOrigins: []string{"https://app.example.test"},
+		AllowBearer:    true,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	account := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := httpauth.FromContext(r.Context())
+		if !ok || session.SubjectID == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		_, _ = w.Write([]byte(`{"authenticated":true}`))
+	})
+	mux := http.NewServeMux()
+	mux.Handle("GET /account", transport.Guard(transport.Require(account)))
+
+	return mux, manager, nil
+}
+
+func request(handler http.Handler, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"https://app.example.test/account",
+		nil,
+	)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, req)
+
+	return response
+}
+
 func main() {
-    store, err := memory.New(100)
-    if err != nil {
-        panic(err)
-    }
+	handler, manager, err := application()
+	if err != nil {
+		panic(err)
+	}
 
-    _, err = auth.New(store, auth.DefaultConfig())
-    if err != nil {
-        panic(err)
-    }
+	fmt.Println("anonymous:", request(handler, "").Code)
 
-    fmt.Println("Session manager ready")
+	// Trusted test setup, never a login route. Real apps verify credentials
+	// before issuance and use the local credential service for password users.
+	issued, err := manager.Start(context.Background(), "synthetic-account")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("authenticated:", request(handler, issued.Token).Code)
+
+	if err := manager.Revoke(context.Background(), issued.Token); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("revoked:", request(handler, issued.Token).Code)
 }
 ```
 
-This bounded memory example demonstrates construction, not production storage.
-It issues no token and grants no role.
+<!-- /example-source -->
+
+Expected output:
+
+```text
+anonymous: 401
+authenticated: 200
+revoked: 401
+```
+
+Session issuance is trusted fixture setup, never an HTTP login endpoint. The
+example deliberately opts into bearer auth for its synthetic API client. Browser
+apps should use the secure cookie adapter; real password accounts use the
+credential service and its version fence. The [tests](examples/protected-http/main_test.go)
+exercise the mounted route without printing tokens. Memory is development-only.
 
 ### 3. Wire credential flows deliberately
 
