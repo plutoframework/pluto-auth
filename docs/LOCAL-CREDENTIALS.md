@@ -16,6 +16,7 @@ ingress limits. Install the published modules:
 go get github.com/plutoframework/pluto-auth@v0.3.0
 go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
 go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
+go get github.com/jackc/pgx/v5/pgxpool@v5.11.0
 ```
 
 This complete composition function builds the actual PostgreSQL-backed service
