@@ -31,7 +31,21 @@ go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
 go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
 ```
 
-### 2. Protect an HTTP route
+### 2. Wire the real credential lifecycle
+
+Use the [compiling PostgreSQL constructor](stores/postgres/examples/local/local.go)
+and [local-credential guide](docs/LOCAL-CREDENTIALS.md) to construct the password
+service, session manager and HTTP transport. Supply a real notification sender,
+shared attempt limits, trusted origins and migrations before mounting its handlers.
+Successful verified-email sign-in issues the secure session cookie; enrollment
+alone grants no application membership or permission.
+
+For a running integration, follow the [purchasing application](https://github.com/plutoframework/pluto-example/blob/main/docs/REFERENCE.md).
+Its PostgreSQL-backed enrollment, verification, sign-in and recovery use Mailpit
+for local delivery. Replace development delivery and limits for deployment.
+
+### Testing: exercise session middleware in process
+
 
 This complete in-process walkthrough mounts a protected handler and exercises
 anonymous access, a trusted synthetic session and revocation. Save it as
@@ -148,13 +162,6 @@ example deliberately opts into bearer auth for its synthetic API client. Browser
 apps should use the secure cookie adapter; real password accounts use the
 credential service and its version fence. The [tests](examples/protected-http/main_test.go)
 exercise the mounted route without printing tokens. Memory is development-only.
-
-### 3. Wire credential flows deliberately
-
-Follow the [credential integration guide](docs/LOCAL-CREDENTIALS.md). Supply real
-delivery, shared attempt limits and trusted ingress; apply migrations explicitly.
-Use the HTTP adapter's secure cookies and Origin checks. Enrollment grants no
-business membership, and authentication never replaces resource authorization.
 
 ## Read further
 
