@@ -3,7 +3,7 @@ module github.com/plutoframework/pluto-auth/methods/password
 go 1.25.5
 
 require (
-	github.com/plutoframework/pluto-auth v0.0.0-20261028031838-10421f02d339
+	github.com/plutoframework/pluto-auth v0.4.0
 	golang.org/x/crypto v0.55.0
 )
 
