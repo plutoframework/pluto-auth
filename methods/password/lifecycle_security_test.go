@@ -162,6 +162,14 @@ func (b *createBarrier) Create(
 	return b.AccountStore.Create(ctx, d, s)
 }
 
+func (b *createBarrier) CreateAuthenticated(
+	ctx context.Context,
+	d auth.Digest,
+	s auth.Session,
+) error {
+	return b.Create(ctx, d, s)
+}
+
 func TestStaleCredentialIssuanceFence(t *testing.T) {
 	for _, mode := range []string{"reset", "disable", "rotation-reset"} {
 		t.Run(mode, func(t *testing.T) {

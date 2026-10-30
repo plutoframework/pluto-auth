@@ -4,7 +4,7 @@ This MVP owns an account ID, canonical email, Argon2id password hash, verified /
 disabled flags, credential version and one challenge per purpose. It owns no
 application profile, role, tenant or membership. Enrollment never grants access
 to business resources. Social/federated OIDC, MFA, OAuth authorization servers,
-frontend/admin UI and email-address changes remain outside this round.
+frontend/admin UI and email-address changes are tracked in the [expansion roadmap](ROADMAP.md).
 
 ## Configure the service and HTTP adapter
 
@@ -13,9 +13,9 @@ a context-aware notification sender, account attempt limits and trusted-client
 ingress limits. Install the published modules:
 
 ```sh
-go get github.com/plutoframework/pluto-auth@v0.3.0
-go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
-go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
+go get github.com/plutoframework/pluto-auth@v0.4.0
+go get github.com/plutoframework/pluto-auth/methods/password@v0.4.0
+go get github.com/plutoframework/pluto-auth/stores/postgres@v0.4.0
 go get github.com/jackc/pgx/v5/pgxpool@v5.11.0
 ```
 
@@ -43,7 +43,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// New assumes Schema and LocalSchema were explicitly migrated. Production
+// New assumes Schema, LocalSchema and AuthenticationSchema were migrated. Production
 // callers supply shared account limits, trusted-client ingress limits, a real
 // sender with fixed HTTPS link destinations, and optionally a local blocklist.
 func New(
@@ -118,6 +118,8 @@ membership and resource permissions through application operations.
    `stores/postgres/migrations/002_local_credentials.sql` as migration 002 through
    application migration tooling. No startup DDL is performed. Existing
    session-only users need no new schema or accounts and can retain `postgres.New`.
+   Apply `stores/postgres/migrations/003_authentication.sql` next for v0.4's
+   shared account policy and evidence; see [the upgrade guide](AUTHENTICATION.md).
 2. Construct `postgres.NewLocal(pool)`, `password.NewHasher`, and
    `password.NewService(ctx, store, hasher, limiter, sender, sessionConfig,
    lifecycleConfig)`. Sender and limiter are mandatory. Service constructs the

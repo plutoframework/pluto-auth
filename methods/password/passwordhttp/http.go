@@ -270,6 +270,7 @@ func (h *Handler) result(w http.ResponseWriter, r *http.Request,
 
 	switch {
 	case errors.Is(err, password.ErrInvalidCredentials),
+		errors.Is(err, auth.ErrAuthenticationRequired),
 		errors.Is(err, auth.ErrUnauthenticated):
 		status, code, public = http.StatusUnauthorized, "invalid_credentials",
 			password.ErrInvalidCredentials

@@ -28,12 +28,13 @@ const (
 // Account is auth-owned credential state, never application profile or RBAC.
 // It is internal service/storage data, not a public API response.
 type Account struct {
-	ID       string `json:"-"`
-	Email    string `json:"-"`
-	Hash     string `json:"-"`
-	Version  int64  `json:"-"`
-	Verified bool   `json:"-"`
-	Disabled bool   `json:"-"`
+	ID                   string `json:"-"`
+	Email                string `json:"-"`
+	Hash                 string `json:"-"`
+	Version              int64  `json:"-"`
+	Verified             bool   `json:"-"`
+	Disabled             bool   `json:"-"`
+	SecondFactorRequired bool   `json:"-"`
 }
 
 // Challenge stores only a purpose-separated digest of a random token.

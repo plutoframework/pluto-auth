@@ -2,7 +2,7 @@ version: "2"
 sql:
   - engine: "postgresql"
     queries: ["queries.sql", "local_queries.sql"]
-    schema: ["schema.sql", "migrations/002_local_credentials.sql"]
+    schema: ["schema.sql", "migrations/002_local_credentials.sql", "migrations/003_authentication.sql"]
     gen:
       go:
         package: "db"

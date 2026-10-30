@@ -108,7 +108,9 @@ Local enrollment, verification/resend, password sign-in, recovery/reset and
 disable are implemented in the optional password/Postgres modules. Federated
 OIDC/social providers, MFA/passkeys, OAuth authorization servers, API keys,
 JWT issuance, frontend/admin UI, email changes, audit delivery and step-up auth
-remain outside scope. The application explicitly mounts routes. See
+are planned in [the expansion roadmap](ROADMAP.md). The current release adds
+[shared account decisions and evidence](AUTHENTICATION.md), not those method
+implementations. The application explicitly mounts routes. See
 [local credential contract](LOCAL-CREDENTIALS.md) for detailed policy, atomicity,
 notification and integration requirements.
 

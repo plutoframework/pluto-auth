@@ -45,3 +45,8 @@ without changing the original session-only Postgres schema/API. Transaction
 rollback, concurrent challenge consumption and old-password issuance barriers are
 covered by disposable Postgres tests. A focused maintainer self-review used the
 security-review skill; it is not independent security assurance.
+
+The v0.4 account decision/evidence model and freshness middleware are original
+Pluto implementations. They do not port an upstream OIDC, TOTP or passkey
+verifier. Protocol methods remain follow-on work; the shared issuance fence is
+reused by the existing password service first.

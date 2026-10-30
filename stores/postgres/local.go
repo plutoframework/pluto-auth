@@ -21,6 +21,12 @@ import (
 //go:embed migrations/002_local_credentials.sql
 var LocalSchema string
 
+// AuthenticationSchema adds shared account policy and session evidence after
+// LocalSchema. Existing account-backed deployments explicitly apply it on upgrade.
+//
+//go:embed migrations/003_authentication.sql
+var AuthenticationSchema string
+
 // TransactionDB must start top-level transactions, never nested savepoints.
 // A pgxpool.Pool is appropriate; pgx.Tx intentionally does not implement it.
 type TransactionDB interface {
@@ -75,12 +81,13 @@ func (s *LocalStore) transaction(ctx context.Context,
 
 func accountRecord(row db.PlutoAuthAccount) password.Account {
 	return password.Account{
-		ID:       row.ID,
-		Email:    row.Email,
-		Hash:     row.PasswordHash,
-		Version:  row.CredentialVersion,
-		Verified: row.Verified,
-		Disabled: row.Disabled,
+		ID:                   row.ID,
+		Email:                row.Email,
+		Hash:                 row.PasswordHash,
+		Version:              row.CredentialVersion,
+		Verified:             row.Verified,
+		Disabled:             row.Disabled,
+		SecondFactorRequired: row.SecondFactorRequired,
 	}
 }
 

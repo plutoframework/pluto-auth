@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// New assumes Schema and LocalSchema were explicitly migrated. Production
+// New assumes Schema, LocalSchema and AuthenticationSchema were migrated. Production
 // callers supply shared account limits, trusted-client ingress limits, a real
 // sender with fixed HTTPS link destinations, and optionally a local blocklist.
 func New(

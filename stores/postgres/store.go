@@ -45,6 +45,10 @@ func (s *Store) Create(
 	digest auth.Digest,
 	session auth.Session,
 ) error {
+	if !session.Authentication.IsZero() {
+		return auth.ErrInvalidConfig
+	}
+
 	return s.queries.CreateSession(ctx, db.CreateSessionParams{
 		TokenDigest: digest[:],
 		ID:          session.ID,

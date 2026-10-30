@@ -15,13 +15,14 @@ import (
 // internally from the SAME account/session store so callers cannot accidentally
 // pair credential fencing with a different session backend.
 type Service struct {
-	store    AccountStore
-	hasher   *Hasher
-	sessions *auth.Manager
-	limiter  AttemptLimiter
-	sender   Sender
-	config   LifecycleConfig
-	dummy    string
+	store               AccountStore
+	hasher              *Hasher
+	sessions            *auth.Manager
+	limiter             AttemptLimiter
+	sender              Sender
+	config              LifecycleConfig
+	dummy               string
+	authenticationClock func() time.Time
 }
 
 func NewService(ctx context.Context, store AccountStore, hasher *Hasher,
@@ -46,8 +47,14 @@ func NewService(ctx context.Context, store AccountStore, hasher *Hasher,
 	}
 
 	return &Service{
-		store: store, hasher: hasher, sessions: manager,
-		limiter: limiter, sender: sender, config: config, dummy: dummy,
+		store:               store,
+		hasher:              hasher,
+		sessions:            manager,
+		limiter:             limiter,
+		sender:              sender,
+		config:              config,
+		dummy:               dummy,
+		authenticationClock: sessions.Clock,
 	}, nil
 }
 
@@ -187,25 +194,25 @@ func (s *Service) ResetPassword(
 		s.config.Clock().UTC()))
 }
 
-func (s *Service) SignIn(ctx context.Context, email string,
+func (s *Service) verifyCredentials(ctx context.Context, email string,
 	value []byte,
-) (auth.IssuedSession, error) {
+) (Account, error) {
 	email, err := s.limitEmail(ctx, "signin", email)
 	if err != nil {
 		if errors.Is(err, ErrInvalidEmail) {
 			err = ErrInvalidCredentials
 		}
 
-		return auth.IssuedSession{}, err
+		return Account{}, err
 	}
 
 	if len(value) == 0 || len(value) > MaxPasswordBytes {
-		return auth.IssuedSession{}, ErrInvalidCredentials
+		return Account{}, ErrInvalidCredentials
 	}
 
 	account, lookupErr := s.store.LookupAccount(ctx, email)
 	if lookupErr != nil && !errors.Is(lookupErr, auth.ErrNotFound) {
-		return auth.IssuedSession{}, ErrUnavailable
+		return Account{}, ErrUnavailable
 	}
 
 	encoded := account.Hash
@@ -215,14 +222,73 @@ func (s *Service) SignIn(ctx context.Context, email string,
 
 	valid, err := s.hasher.Verify(ctx, value, encoded)
 	if err != nil {
-		return auth.IssuedSession{}, ErrUnavailable
+		return Account{}, ErrUnavailable
 	}
 
 	if !valid || lookupErr != nil || !account.Verified || account.Disabled {
-		return auth.IssuedSession{}, ErrInvalidCredentials
+		return Account{}, ErrInvalidCredentials
 	}
 
-	issued, err := s.sessions.StartVersioned(ctx, account.ID, account.Version)
+	return account, nil
+}
+
+// BeginSignIn verifies the password and returns a server-local decision only.
+// It issues no token or cookie. Factor adapters must verify their own proofs
+// before advancing this decision; never accept a client-supplied method label.
+func (s *Service) BeginSignIn(
+	ctx context.Context,
+	email string,
+	value []byte,
+) (auth.Ceremony, error) {
+	account, err := s.verifyCredentials(ctx, email, value)
+	if err != nil {
+		return auth.Ceremony{}, err
+	}
+
+	now := s.authenticationClock().UTC()
+
+	ceremony, err := auth.NewCeremony(auth.AccountState{
+		SubjectID:            account.ID,
+		Version:              account.Version,
+		Disabled:             account.Disabled,
+		SecondFactorRequired: account.SecondFactorRequired,
+	}, false, now, 5*time.Minute)
+	if err != nil {
+		return auth.Ceremony{}, ErrInvalidCredentials
+	}
+
+	return ceremony.PrimaryVerified(auth.MethodPassword, now)
+}
+
+func (s *Service) SignIn(
+	ctx context.Context,
+	email string,
+	value []byte,
+) (auth.IssuedSession, error) {
+	ceremony, err := s.BeginSignIn(ctx, email, value)
+	if err != nil {
+		return auth.IssuedSession{}, err
+	}
+
+	proof, err := ceremony.Complete(s.authenticationClock().UTC())
+	if err != nil {
+		return auth.IssuedSession{}, err
+	}
+
+	var issued auth.IssuedSession
+	if _, supported := s.store.(auth.AccountSessionStore); supported {
+		issued, err = s.sessions.StartAuthenticated(ctx, proof)
+	} else {
+		// Legacy custom stores retain their prior fenced password contract.
+		// They cannot issue recent-authentication evidence or satisfy step-up.
+		state := ceremony.Account()
+		issued, err = s.sessions.StartVersioned(
+			ctx,
+			state.SubjectID,
+			state.Version,
+		)
+	}
+
 	if errors.Is(err, auth.ErrUnauthenticated) {
 		return auth.IssuedSession{}, ErrInvalidCredentials
 	}

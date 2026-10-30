@@ -59,7 +59,10 @@ func localSetup(
 	pool := testPool(t)
 
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, postgres.LocalSchema); err != nil {
+	if _, err := pool.Exec(
+		ctx,
+		postgres.LocalSchema+"\n"+postgres.AuthenticationSchema,
+	); err != nil {
 		t.Fatal(err)
 	}
 

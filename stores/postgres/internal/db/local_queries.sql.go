@@ -10,24 +10,45 @@ import (
 	"time"
 )
 
-const bindLocalSession = `-- name: BindLocalSession :exec
+const bindLocalSession = `-- name: BindLocalSession :execrows
 INSERT INTO pluto_auth_local_sessions
-(token_digest, account_id, credential_version) VALUES ($1, $2, $3)
+(token_digest, account_id, credential_version, primary_method, primary_at,
+    second_factor_method, second_factor_at)
+SELECT $1, $2, $3, $4, $5, $6, $7
+WHERE $8::timestamptz = '0001-01-01 00:00:00+00'
+    OR clock_timestamp() < $8::timestamptz
 `
 
 type BindLocalSessionParams struct {
-	TokenDigest       []byte
-	AccountID         string
-	CredentialVersion int64
+	TokenDigest        []byte
+	AccountID          string
+	CredentialVersion  int64
+	PrimaryMethod      string
+	PrimaryAt          time.Time
+	SecondFactorMethod string
+	SecondFactorAt     time.Time
+	IssuanceDeadline   time.Time
 }
 
-func (q *Queries) BindLocalSession(ctx context.Context, arg BindLocalSessionParams) error {
-	_, err := q.db.Exec(ctx, bindLocalSession, arg.TokenDigest, arg.AccountID, arg.CredentialVersion)
-	return err
+func (q *Queries) BindLocalSession(ctx context.Context, arg BindLocalSessionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, bindLocalSession,
+		arg.TokenDigest,
+		arg.AccountID,
+		arg.CredentialVersion,
+		arg.PrimaryMethod,
+		arg.PrimaryAt,
+		arg.SecondFactorMethod,
+		arg.SecondFactorAt,
+		arg.IssuanceDeadline,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const challengeAccount = `-- name: ChallengeAccount :one
-SELECT a.id, a.email, a.password_hash, a.credential_version, a.verified, a.disabled FROM pluto_auth_accounts a
+SELECT a.id, a.email, a.password_hash, a.credential_version, a.verified, a.disabled, a.second_factor_required FROM pluto_auth_accounts a
 JOIN pluto_auth_challenges c ON a.id = c.account_id
 WHERE c.token_digest = $1 AND c.purpose = $2
     AND c.credential_version = a.credential_version AND NOT a.disabled
@@ -53,6 +74,7 @@ func (q *Queries) ChallengeAccount(ctx context.Context, arg ChallengeAccountPara
 		&i.CredentialVersion,
 		&i.Verified,
 		&i.Disabled,
+		&i.SecondFactorRequired,
 	)
 	return i, err
 }
@@ -64,6 +86,8 @@ WHERE s.token_digest = $1 AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
     AND a.verified AND NOT a.disabled
+    AND (NOT a.second_factor_required OR
+        b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= $2::timestamptz
     AND s.expires_at > $2::timestamptz
     AND ($3::bigint = 0 OR s.last_seen_at >
@@ -146,7 +170,7 @@ func (q *Queries) EnrollAccount(ctx context.Context, arg EnrollAccountParams) er
 }
 
 const lockAccountEmail = `-- name: LockAccountEmail :one
-SELECT id, email, password_hash, credential_version, verified, disabled FROM pluto_auth_accounts WHERE email = $1 FOR UPDATE
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE email = $1 FOR UPDATE
 `
 
 func (q *Queries) LockAccountEmail(ctx context.Context, email string) (PlutoAuthAccount, error) {
@@ -159,12 +183,13 @@ func (q *Queries) LockAccountEmail(ctx context.Context, email string) (PlutoAuth
 		&i.CredentialVersion,
 		&i.Verified,
 		&i.Disabled,
+		&i.SecondFactorRequired,
 	)
 	return i, err
 }
 
 const lockAccountID = `-- name: LockAccountID :one
-SELECT id, email, password_hash, credential_version, verified, disabled FROM pluto_auth_accounts WHERE id = $1 FOR UPDATE
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockAccountID(ctx context.Context, id string) (PlutoAuthAccount, error) {
@@ -177,12 +202,13 @@ func (q *Queries) LockAccountID(ctx context.Context, id string) (PlutoAuthAccoun
 		&i.CredentialVersion,
 		&i.Verified,
 		&i.Disabled,
+		&i.SecondFactorRequired,
 	)
 	return i, err
 }
 
 const lookupAccount = `-- name: LookupAccount :one
-SELECT id, email, password_hash, credential_version, verified, disabled FROM pluto_auth_accounts WHERE email = $1
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE email = $1
 `
 
 func (q *Queries) LookupAccount(ctx context.Context, email string) (PlutoAuthAccount, error) {
@@ -195,19 +221,55 @@ func (q *Queries) LookupAccount(ctx context.Context, email string) (PlutoAuthAcc
 		&i.CredentialVersion,
 		&i.Verified,
 		&i.Disabled,
+		&i.SecondFactorRequired,
 	)
 	return i, err
 }
 
-const lookupLocalSessionVersion = `-- name: LookupLocalSessionVersion :one
-SELECT credential_version FROM pluto_auth_local_sessions WHERE token_digest = $1
+const lookupAccountID = `-- name: LookupAccountID :one
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE id = $1
 `
 
-func (q *Queries) LookupLocalSessionVersion(ctx context.Context, tokenDigest []byte) (int64, error) {
-	row := q.db.QueryRow(ctx, lookupLocalSessionVersion, tokenDigest)
-	var credential_version int64
-	err := row.Scan(&credential_version)
-	return credential_version, err
+func (q *Queries) LookupAccountID(ctx context.Context, id string) (PlutoAuthAccount, error) {
+	row := q.db.QueryRow(ctx, lookupAccountID, id)
+	var i PlutoAuthAccount
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.CredentialVersion,
+		&i.Verified,
+		&i.Disabled,
+		&i.SecondFactorRequired,
+	)
+	return i, err
+}
+
+const lookupLocalSessionAuthentication = `-- name: LookupLocalSessionAuthentication :one
+SELECT credential_version, primary_method, primary_at, second_factor_method,
+    second_factor_at
+FROM pluto_auth_local_sessions WHERE token_digest = $1
+`
+
+type LookupLocalSessionAuthenticationRow struct {
+	CredentialVersion  int64
+	PrimaryMethod      string
+	PrimaryAt          time.Time
+	SecondFactorMethod string
+	SecondFactorAt     time.Time
+}
+
+func (q *Queries) LookupLocalSessionAuthentication(ctx context.Context, tokenDigest []byte) (LookupLocalSessionAuthenticationRow, error) {
+	row := q.db.QueryRow(ctx, lookupLocalSessionAuthentication, tokenDigest)
+	var i LookupLocalSessionAuthenticationRow
+	err := row.Scan(
+		&i.CredentialVersion,
+		&i.PrimaryMethod,
+		&i.PrimaryAt,
+		&i.SecondFactorMethod,
+		&i.SecondFactorAt,
+	)
+	return i, err
 }
 
 const pruneExpiredChallenges = `-- name: PruneExpiredChallenges :execrows
@@ -270,6 +332,22 @@ func (q *Queries) ResetAccount(ctx context.Context, arg ResetAccountParams) erro
 	return err
 }
 
+const setSecondFactorPolicy = `-- name: SetSecondFactorPolicy :exec
+UPDATE pluto_auth_accounts
+SET second_factor_required = $2, credential_version = credential_version + 1
+WHERE id = $1
+`
+
+type SetSecondFactorPolicyParams struct {
+	ID                   string
+	SecondFactorRequired bool
+}
+
+func (q *Queries) SetSecondFactorPolicy(ctx context.Context, arg SetSecondFactorPolicyParams) error {
+	_, err := q.db.Exec(ctx, setSecondFactorPolicy, arg.ID, arg.SecondFactorRequired)
+	return err
+}
+
 const useLocalSession = `-- name: UseLocalSession :one
 UPDATE pluto_auth_sessions s
 SET last_seen_at = GREATEST(s.last_seen_at, $1::timestamptz)
@@ -278,13 +356,16 @@ WHERE s.token_digest = $2 AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
     AND a.verified AND NOT a.disabled
+    AND (NOT a.second_factor_required OR
+        b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= $1::timestamptz
     AND s.expires_at > $1::timestamptz
     AND ($3::bigint = 0 OR s.last_seen_at >
         $1::timestamptz -
         $3::bigint * interval '1 microsecond')
 RETURNING s.id, s.subject_id, s.created_at, s.expires_at, s.last_seen_at,
-    b.credential_version
+    b.credential_version, b.primary_method, b.primary_at,
+    b.second_factor_method, b.second_factor_at
 `
 
 type UseLocalSessionParams struct {
@@ -294,12 +375,16 @@ type UseLocalSessionParams struct {
 }
 
 type UseLocalSessionRow struct {
-	ID                string
-	SubjectID         string
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	LastSeenAt        time.Time
-	CredentialVersion int64
+	ID                 string
+	SubjectID          string
+	CreatedAt          time.Time
+	ExpiresAt          time.Time
+	LastSeenAt         time.Time
+	CredentialVersion  int64
+	PrimaryMethod      string
+	PrimaryAt          time.Time
+	SecondFactorMethod string
+	SecondFactorAt     time.Time
 }
 
 func (q *Queries) UseLocalSession(ctx context.Context, arg UseLocalSessionParams) (UseLocalSessionRow, error) {
@@ -312,6 +397,10 @@ func (q *Queries) UseLocalSession(ctx context.Context, arg UseLocalSessionParams
 		&i.ExpiresAt,
 		&i.LastSeenAt,
 		&i.CredentialVersion,
+		&i.PrimaryMethod,
+		&i.PrimaryAt,
+		&i.SecondFactorMethod,
+		&i.SecondFactorAt,
 	)
 	return i, err
 }

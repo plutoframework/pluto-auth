@@ -29,6 +29,13 @@ sources and optional modules do not become core runtime dependencies. The
 checked-in go.work joins modules for development; published modules contain
 actual version requirements without local filesystem replacements.
 
+## Account authentication and expansion
+
+See [account authentication](AUTHENTICATION.md) for v0.4's shared account policy,
+password evidence, recent-authentication guard and mandatory account-store upgrade
+migration. [The roadmap](ROADMAP.md) places social/OIDC, MFA/passkeys and account
+management in planned application capabilities, rather than permanent exclusions.
+
 ## Session setup
 
 ```go
@@ -127,9 +134,9 @@ not a drop-in replacement for Limen or a promise to maintain its plugin suite.
 ## Scope
 
 This round implements local password credentials only. Social/federated OIDC
-providers, MFA/passkeys, OAuth authorization servers, frontend/admin UI, email
-address changes and generic identity-platform features remain outside this
-library. There are no automatic admins, tenants or grants. Deployment still
+providers, MFA/passkeys, frontend/admin UI and email-address changes are
+planned in the [expansion roadmap](ROADMAP.md). OAuth authorization-server and
+enterprise identity-platform roles remain separate scope decisions. There are no automatic admins, tenants or grants. Deployment still
 requires real delivery, shared limits, trusted ingress, migrations and an
 application-specific security review; this is not an audited production-ready
 identity service.

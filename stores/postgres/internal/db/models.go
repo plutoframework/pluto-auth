@@ -9,12 +9,13 @@ import (
 )
 
 type PlutoAuthAccount struct {
-	ID                string
-	Email             string
-	PasswordHash      string
-	CredentialVersion int64
-	Verified          bool
-	Disabled          bool
+	ID                   string
+	Email                string
+	PasswordHash         string
+	CredentialVersion    int64
+	Verified             bool
+	Disabled             bool
+	SecondFactorRequired bool
 }
 
 type PlutoAuthChallenge struct {
@@ -27,9 +28,13 @@ type PlutoAuthChallenge struct {
 }
 
 type PlutoAuthLocalSession struct {
-	TokenDigest       []byte
-	AccountID         string
-	CredentialVersion int64
+	TokenDigest        []byte
+	AccountID          string
+	CredentialVersion  int64
+	PrimaryMethod      string
+	PrimaryAt          time.Time
+	SecondFactorMethod string
+	SecondFactorAt     time.Time
 }
 
 type PlutoAuthSession struct {

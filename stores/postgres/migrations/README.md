@@ -5,6 +5,9 @@
   credential lifecycle. This adds separate tables; it does not attach accounts
   to existing opaque sessions or impose a new foreign key on their subjects.
 
+- 003: account-backed v0.4 deployments also apply `003_authentication.sql`.
+  It adds factor policy and evidence without granting fresh proof to old sessions.
+
 Migration execution/version tracking and privileges belong to the application.
 Constructors never execute DDL. Apply each migration once, in order. Existing
 session-only `New` users can continue with 001 alone. Rollback of 002 is an

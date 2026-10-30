@@ -251,6 +251,16 @@ func (m *accountMemory) Create(
 	for _, a := range m.accounts {
 		if a.ID == s.SubjectID && a.Verified && !a.Disabled &&
 			s.CredentialVersion > 0 && a.Version == s.CredentialVersion {
+			state := auth.AccountState{
+				SubjectID:            a.ID,
+				Version:              a.Version,
+				Disabled:             a.Disabled,
+				SecondFactorRequired: a.SecondFactorRequired,
+			}
+			if err := state.Accepts(s); err != nil {
+				return err
+			}
+
 			return m.SessionStore.Create(ctx, d, s)
 		}
 	}
@@ -509,4 +519,16 @@ func TestServiceLifecycle(t *testing.T) {
 	) {
 		t.Fatal("disabled signin")
 	}
+}
+
+func (m *accountMemory) CreateAuthenticated(
+	ctx context.Context,
+	digest auth.Digest,
+	session auth.Session,
+) error {
+	if session.Authentication.IsZero() {
+		return auth.ErrUnauthenticated
+	}
+
+	return m.Create(ctx, digest, session)
 }

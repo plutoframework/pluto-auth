@@ -32,7 +32,15 @@ func (m *Manager) Start(
 ) (IssuedSession, error) {
 	now := m.config.Clock().UTC()
 
-	return m.issue(ctx, subjectID, 0, now, now.Add(m.config.TTL))
+	return m.issue(
+		ctx,
+		subjectID,
+		0,
+		now,
+		now.Add(m.config.TTL),
+		Evidence{},
+		time.Time{},
+	)
 }
 
 // StartVersioned issues through a store that atomically checks the credential
@@ -47,7 +55,15 @@ func (m *Manager) StartVersioned(
 
 	now := m.config.Clock().UTC()
 
-	return m.issue(ctx, subjectID, version, now, now.Add(m.config.TTL))
+	return m.issue(
+		ctx,
+		subjectID,
+		version,
+		now,
+		now.Add(m.config.TTL),
+		Evidence{},
+		time.Time{},
+	)
 }
 
 func (m *Manager) issue(
@@ -56,6 +72,8 @@ func (m *Manager) issue(
 	version int64,
 	now time.Time,
 	expires time.Time,
+	evidence Evidence,
+	deadline time.Time,
 ) (IssuedSession, error) {
 	if err := ctx.Err(); err != nil {
 		return IssuedSession{}, err
@@ -80,13 +98,25 @@ func (m *Manager) issue(
 	session := Session{
 		ID:                rand.Text(),
 		CredentialVersion: version,
+		Authentication:    evidence,
+		IssuanceDeadline:  deadline,
 		SubjectID:         subjectID,
 		CreatedAt:         now,
 		LastSeenAt:        now,
 		ExpiresAt:         expires,
 	}
 
-	if err := m.store.Create(ctx, digest, session); err != nil {
+	create := m.store.Create
+	if !evidence.IsZero() {
+		store, ok := m.store.(AccountSessionStore)
+		if !ok {
+			return IssuedSession{}, ErrInvalidConfig
+		}
+
+		create = store.CreateAuthenticated
+	}
+
+	if err := create(ctx, digest, session); err != nil {
 		return IssuedSession{}, fmt.Errorf("auth: create session: %w", err)
 	}
 
@@ -182,5 +212,7 @@ func (m *Manager) Rotate(
 		session.CredentialVersion,
 		now,
 		session.ExpiresAt,
+		session.Authentication,
+		time.Time{},
 	)
 }

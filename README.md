@@ -21,14 +21,14 @@ Identity with explicit boundaries, from credentials to sessions.
 From a Go **1.25.5+** module:
 
 ```sh
-go get github.com/plutoframework/pluto-auth@v0.3.0
+go get github.com/plutoframework/pluto-auth@v0.4.0
 ```
 
 Password and PostgreSQL modules are optional; pin them explicitly when needed:
 
 ```sh
-go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
-go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
+go get github.com/plutoframework/pluto-auth/methods/password@v0.4.0
+go get github.com/plutoframework/pluto-auth/stores/postgres@v0.4.0
 ```
 
 ### 2. Wire the real credential lifecycle
@@ -162,6 +162,14 @@ example deliberately opts into bearer auth for its synthetic API client. Browser
 apps should use the secure cookie adapter; real password accounts use the
 credential service and its version fence. The [tests](examples/protected-http/main_test.go)
 exercise the mounted route without printing tokens. Memory is development-only.
+
+## Account authentication foundation
+
+Password sign-in now persists server-owned method evidence. Rotation preserves
+its original verification time; sensitive routes can require recent verification.
+The [account authentication guide](docs/AUTHENTICATION.md) includes the migration,
+HTTP guard and custom-store compatibility contract. Native social sign-in and
+factor enrollment follow the [expansion roadmap](docs/ROADMAP.md).
 
 ## Read further
 
