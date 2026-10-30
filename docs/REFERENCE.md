@@ -34,19 +34,19 @@ actual version requirements without local filesystem replacements.
 ```go
 store, err := memory.New(1000)
 if err != nil {
-    return err
+	return err
 }
 
 manager, err := auth.New(store, auth.DefaultConfig())
 if err != nil {
-    return err
+	return err
 }
 
 transport, err := httpauth.New(manager, httpauth.Config{
-    TrustedOrigins: []string{"https://app.example.com"},
+	TrustedOrigins: []string{"https://app.example.com"},
 })
 if err != nil {
-    return err
+	return err
 }
 
 router.Handle("/api/profile", transport.Require(profileHandler))

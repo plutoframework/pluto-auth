@@ -6,14 +6,112 @@ application profile, role, tenant or membership. Enrollment never grants access
 to business resources. Social/federated OIDC, MFA, OAuth authorization servers,
 frontend/admin UI and email-address changes remain outside this round.
 
-## Replace demo bootstrap
+## Configure the service and HTTP adapter
 
-A compiling constructor lives in
-[`stores/postgres/examples/local/local.go`](../stores/postgres/examples/local/local.go).
-It takes an existing pgx pool, a real Sender, shared AttemptLimiter, trusted
-client ingress middleware, exact trusted origins and optional password policy.
-It sends nothing and starts no listener. The adjacent example test uses only a
-bounded in-process recorder with synthetic notification data.
+Requires Go 1.25.5+, PostgreSQL, explicit migrations, an HTTPS application origin,
+a context-aware notification sender, account attempt limits and trusted-client
+ingress limits. Install the published modules:
+
+```sh
+go get github.com/plutoframework/pluto-auth@v0.3.0
+go get github.com/plutoframework/pluto-auth/methods/password@v0.3.0
+go get github.com/plutoframework/pluto-auth/stores/postgres@v0.3.0
+```
+
+This complete composition function builds the actual PostgreSQL-backed service
+and POST-only HTTP adapter. The caller supplies delivery and limit enforcement;
+those arguments are required integrations, not optional no-op defaults.
+
+<!-- example-source: stores/postgres/examples/local/local.go -->
+
+```go
+// Package local shows explicit construction with application-owned delivery and
+// limits. It does not bootstrap demo credentials, listen or send any messages.
+package local
+
+import (
+	"context"
+	"net/http"
+
+	auth "github.com/plutoframework/pluto-auth"
+	"github.com/plutoframework/pluto-auth/httpauth"
+	"github.com/plutoframework/pluto-auth/methods/password"
+	"github.com/plutoframework/pluto-auth/methods/password/passwordhttp"
+	"github.com/plutoframework/pluto-auth/stores/postgres"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// New assumes Schema and LocalSchema were explicitly migrated. Production
+// callers supply shared account limits, trusted-client ingress limits, a real
+// sender with fixed HTTPS link destinations, and optionally a local blocklist.
+func New(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	sender password.Sender,
+	limiter password.AttemptLimiter,
+	ingress func(http.Handler) http.Handler,
+	trustedOrigins []string,
+	policy password.PasswordPolicy,
+) (*password.Service, *passwordhttp.Handler, error) {
+	store, err := postgres.NewLocal(pool)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	hasher, err := password.NewHasher(password.DefaultConfig())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config := password.DefaultLifecycleConfig()
+	config.Policy = policy
+
+	service, err := password.NewService(
+		ctx,
+		store,
+		hasher,
+		limiter,
+		sender,
+		auth.DefaultConfig(),
+		config,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	handler, err := passwordhttp.New(service, passwordhttp.Config{
+		Transport: httpauth.Config{
+			TrustedOrigins: trustedOrigins,
+		},
+		Ingress: ingress,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return service, handler, nil
+}
+```
+
+<!-- /example-source -->
+
+Call `New` during application startup, handle its error, then mount the returned
+handler. This mounting excerpt assumes `handler` came from that constructor and
+`profileHandler` is your existing application handler:
+
+```go
+mux := http.NewServeMux()
+mux.Handle("/auth/", http.StripPrefix("/auth", handler))
+mux.Handle("GET /api/profile", handler.Transport().Require(profileHandler))
+```
+
+The adapter sets the secure session cookie after verified-email sign-in. Keep
+HTTPS and the exact trusted Origin configured. `profileHandler` reads the
+verified session with `httpauth.FromContext(request.Context())`, then resolves
+membership and resource permissions through application operations.
+
+### Apply schemas and wire dependencies
 
 1. Apply the original `stores/postgres/schema.sql` as migration 001, then optional
    `stores/postgres/migrations/002_local_credentials.sql` as migration 002 through
@@ -38,6 +136,44 @@ sessions. Do not use session-only `postgres.New` or direct SQL to issue/rotate
 sessions for local account IDs. `StartVersioned` is a trusted primitive, not a
 public login API. The older `NewAuthenticator` remains compatible for external
 credential stores but does not implement this workflow or its issuance barrier.
+
+## Enroll, verify and sign in
+
+Against your running HTTPS application, submit enrollment with an allowlisted
+Origin. This is example input for a disposable development account; choose a
+private password for real accounts:
+
+```sh
+curl --fail-with-body https://app.example.test/auth/enroll \
+  --header 'Origin: https://app.example.test' \
+  --json @- <<'JSON'
+{
+  "email": "reader@example.test",
+  "password": "A long local example password 42!"
+}
+JSON
+```
+
+A successful request returns HTTP 202 with `{"code":"accepted"}`. That same
+response is used for duplicate or ineligible enrollment, so it does not prove an
+account was created. The configured sender delivers the verification challenge.
+The confirmation page explicitly POSTs its token to `/auth/verify`; it must not
+submit automatically on page load or consume tokens on GET.
+
+After verification, POST the account's email/password to `/auth/signin` with the
+same trusted Origin. The browser receives a Secure, HttpOnly session cookie;
+there is no session token in JSON. Send same-origin browser API requests with
+cookies. Protect business routes with `Require`, then perform membership/RBAC and
+resource checks. Public enrollment grants none of those permissions.
+
+For recovery, POST email to `/auth/recovery`. The reset page explicitly submits
+the delivered token and new password to `/auth/reset`. Successful reset revokes
+old sessions; the user signs in again. POST `/auth/logout` to revoke the active
+session and clear its cookie. The table below gives every route's exact input.
+
+The [full purchasing application](https://github.com/plutoframework/pluto-example/blob/main/docs/REFERENCE.md)
+implements these HTTP flows with real PostgreSQL and local Mailpit delivery.
+Its Mailpit sender is a development adapter, not a production email provider.
 
 ## Service API and HTTP wire contract
 

@@ -18,9 +18,14 @@ import (
 // New assumes Schema and LocalSchema were explicitly migrated. Production
 // callers supply shared account limits, trusted-client ingress limits, a real
 // sender with fixed HTTPS link destinations, and optionally a local blocklist.
-func New(ctx context.Context, pool *pgxpool.Pool, sender password.Sender,
-	limiter password.AttemptLimiter, ingress func(http.Handler) http.Handler,
-	trustedOrigins []string, policy password.PasswordPolicy,
+func New(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	sender password.Sender,
+	limiter password.AttemptLimiter,
+	ingress func(http.Handler) http.Handler,
+	trustedOrigins []string,
+	policy password.PasswordPolicy,
 ) (*password.Service, *passwordhttp.Handler, error) {
 	store, err := postgres.NewLocal(pool)
 	if err != nil {
@@ -35,8 +40,15 @@ func New(ctx context.Context, pool *pgxpool.Pool, sender password.Sender,
 	config := password.DefaultLifecycleConfig()
 	config.Policy = policy
 
-	service, err := password.NewService(ctx, store, hasher, limiter, sender,
-		auth.DefaultConfig(), config)
+	service, err := password.NewService(
+		ctx,
+		store,
+		hasher,
+		limiter,
+		sender,
+		auth.DefaultConfig(),
+		config,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
