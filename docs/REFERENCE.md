@@ -133,7 +133,8 @@ not a drop-in replacement for Limen or a promise to maintain its plugin suite.
 
 ## Scope
 
-This round implements local password credentials only. Social/federated OIDC
+The current authentication method is local password credentials, backed by
+the shared account/evidence foundation. Social/federated OIDC
 providers, MFA/passkeys, frontend/admin UI and email-address changes are
 planned in the [expansion roadmap](ROADMAP.md). OAuth authorization-server and
 enterprise identity-platform roles remain separate scope decisions. There are no automatic admins, tenants or grants. Deployment still

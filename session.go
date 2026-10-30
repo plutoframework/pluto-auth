@@ -24,10 +24,12 @@ type Session struct {
 	CreatedAt  time.Time `json:"created_at"`
 	ExpiresAt  time.Time `json:"expires_at"`
 	LastSeenAt time.Time `json:"last_seen_at"`
+
 	// CredentialVersion is an optional issuance fence for local account stores.
 	// Zero denotes an opaque session without a local credential binding.
 	CredentialVersion int64    `json:"-"`
 	Authentication    Evidence `json:"-"`
+
 	// IssuanceDeadline is a transient Create-time bound, not session lifetime.
 	IssuanceDeadline time.Time `json:"-"`
 }
