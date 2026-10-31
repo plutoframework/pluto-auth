@@ -101,16 +101,30 @@ Wrong passwords, unknown and disabled accounts return ErrInvalidCredentials.
 Storage/cancellation/hash errors fail closed. Map internal errors to generic
 client responses; do not expose account existence, database errors or PHC hashes.
 
+## Native factors
+
+The optional [TOTP workflow](TOTP.md) uses encrypted seeds, bounded clock windows,
+global per-factor replay counters and digest-only single-use recovery codes.
+Pending authentication is account/version/purpose/browser bound and never a
+session. Proof consumption and session issuance or factor changes commit under
+the same account fence. Factor changes require fresh primary and appropriate
+existing-factor proof, advance the version and revoke sessions. Password reset
+retains MFA policy and factors; losing all recovery material requires a separately
+designed host recovery process, not silent downgrade. Configure real shared
+limits, host key management and change notifications. TOTP is not phishing
+resistant, and no independently audited assurance claim is made.
+
 ## Scope and verification
 
 This is pre-release library code, not an independently audited identity provider.
 Local enrollment, verification/resend, password sign-in, recovery/reset and
 disable are implemented in the optional password/Postgres modules. Federated
-OIDC/social providers, MFA/passkeys, OAuth authorization servers, API keys,
-JWT issuance, frontend/admin UI, email changes, audit delivery and step-up auth
-are planned in [the expansion roadmap](ROADMAP.md). The current release adds
-[shared account decisions and evidence](AUTHENTICATION.md), not those method
-implementations. The application explicitly mounts routes. See
+OIDC sign-in and native TOTP/recovery now have optional modules. Passkeys,
+OAuth authorization servers, API keys, JWT issuance, frontend/admin UI, email
+changes, audit delivery and step-up UI are planned in
+[the expansion roadmap](ROADMAP.md). The optional workflows build on
+[shared account decisions and evidence](AUTHENTICATION.md).
+The application explicitly mounts routes. See
 [local credential contract](LOCAL-CREDENTIALS.md) for detailed policy, atomicity,
 notification and integration requirements.
 

@@ -181,6 +181,11 @@ MUTATIONS = [
     ('OIDC callback browser binding ignored in SQL', 'stores/postgres/internal/db/oidc_queries.sql.go', 'AND browser_digest = $2', 'AND ($2::bytea IS NOT NULL)', './stores/postgres/oidc', 'TestEncryptedTransactions'),
     ('OIDC pending capacity ignored', 'stores/postgres/internal/db/oidc_queries.sql.go', '< $5::bigint', '< $5::bigint + 100', './stores/postgres/oidc', 'TestEncryptedTransactions'),
     ('OIDC begin Origin guard removed', 'methods/oidc/oidchttp/http.go', 'transport.Guard(mux)', 'mux', './stores/postgres/oidc', 'TestBrowserSignInAndAccountFence'),
+    ('atomic TOTP counter ignored', 'stores/postgres/totp/commit.go', 'c.Step <= f.LastStep', 'c.Step < f.LastStep', './stores/postgres/totp', 'TestAtomicTOTPCounterAcrossActions'),
+    ('TOTP replay counter ignored', 'methods/totp/totp.go', 'step > last', 'step >= last', './methods/totp', 'TestVectorsAndWindow'),
+    ('TOTP browser binding ignored', 'stores/postgres/totp/store.go', 'p.browser_digest=$2', '($2::bytea IS NOT NULL)', './stores/postgres/totp', 'TestNativeSignInReplayAndRecovery'),
+    ('recovery code retained', 'stores/postgres/totp/commit.go', 'DELETE FROM pluto_auth_totp_recovery\n     WHERE account_id=$1 AND digest=$2', 'SELECT digest FROM pluto_auth_totp_recovery\n     WHERE account_id=$1 AND digest=$2', './stores/postgres/totp', 'TestNativeSignInReplayAndRecovery'),
+    ('factor Origin guard removed', 'methods/totp/totphttp/http.go', 'transport.Guard(mux)', 'mux', './methods/totp/totphttp', 'TestDeniedRequests'),
 ]
 
 

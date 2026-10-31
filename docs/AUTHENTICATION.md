@@ -4,7 +4,8 @@ Pluto Auth v0.4 adds shared account policy, server-local authentication decision
 and method evidence. The first integrated method is the existing password
 service. This is the foundation for native social sign-in, MFA and step-up flows;
 the optional [OIDC workflow](OIDC.md) now verifies provider sign-in. Native TOTP
-verification remains on the roadmap.
+verification is available in the optional [native second-factor workflow](TOTP.md)
+(unreleased).
 
 ## Upgrade
 
@@ -15,6 +16,8 @@ Account-backed `postgres.NewLocal` users must explicitly apply these in order:
 2. `migrations/002_local_credentials.sql` — password accounts and challenges.
 3. `migrations/003_authentication.sql` — account factor policy and evidence.
 4. `migrations/004_external_accounts.sql` — explicit local/external credential kinds.
+5. Optionally, `migrations/005_totp.sql` — native TOTP factors, pending challenges
+   and recovery digests, when using `stores/postgres/totp`.
 
 Apply each once through application migration tooling. No constructor runs DDL.
 Migration 003 preserves old sessions with **unknown** authentication evidence.
@@ -101,8 +104,9 @@ absolute session deadline. Password recovery does not remove a required factor.
 changes advance the account version and atomically revoke its sessions and
 password challenges. It is not enrollment or recovery. Do not enable this policy
 until a verified factor implementation and a recovery path are configured.
-Native factor enrollment/verification and corresponding CLI/UI flows are next
-work; they are not shipped by this foundation release.
+The optional [TOTP module](TOTP.md) now provides enrollment/verification and
+recovery with protected lifecycle APIs. Corresponding cross-repository CLI/UI
+flows remain follow-up work; they are not supplied by the core foundation.
 
 The existing `Start` and `StartVersioned` remain trusted issuance primitives.
 `LocalStore` rejects them when they would bypass a required factor. Never issue

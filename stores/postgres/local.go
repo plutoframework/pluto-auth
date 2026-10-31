@@ -32,6 +32,12 @@ var AuthenticationSchema string
 //go:embed migrations/004_external_accounts.sql
 var ExternalSchema string
 
+// TOTPSchema is optional native-factor migration 005, applied after 004.
+// Only deployments using the optional totp adapter need these tables.
+//
+//go:embed migrations/005_totp.sql
+var TOTPSchema string
+
 // TransactionDB must start top-level transactions, never nested savepoints.
 // A pgxpool.Pool is appropriate; pgx.Tx intentionally does not implement it.
 type TransactionDB interface {

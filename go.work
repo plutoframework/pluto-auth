@@ -4,6 +4,8 @@ use (
 	.
 	./methods/oidc
 	./methods/password
+	./methods/totp
 	./stores/postgres
 	./stores/postgres/oidc
+	./stores/postgres/totp
 )

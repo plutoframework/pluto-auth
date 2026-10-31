@@ -12,6 +12,7 @@ Identity with explicit boundaries, from credentials to sessions.
 
 - Opaque sessions, secure cookie adapters and typed persistence.
 - Optional verified-email enrollment, sign-in, verification and recovery.
+- Native TOTP, single-use recovery codes and protected factor changes (unreleased).
 - Separate identity from membership, RBAC and resource authorization.
 
 ## Get started
@@ -168,8 +169,10 @@ exercise the mounted route without printing tokens. Memory is development-only.
 Password sign-in now persists server-owned method evidence. Rotation preserves
 its original verification time; sensitive routes can require recent verification.
 The [account authentication guide](docs/AUTHENTICATION.md) includes the migration,
-HTTP guard and custom-store compatibility contract. Native social sign-in and
-factor enrollment follow the [expansion roadmap](docs/ROADMAP.md).
+HTTP guard and custom-store compatibility contract. The optional
+[native second-factor workflow](https://plutoframework.github.io/pluto-site/docs/backend/totp/) adds TOTP, pending sign-in,
+single-use recovery codes and protected factor changes. See the
+[expansion roadmap](docs/ROADMAP.md) for remaining ecosystem integration.
 
 ## Read further
 

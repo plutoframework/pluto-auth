@@ -46,6 +46,13 @@ func NewCeremony(
 // Account returns a copy of server-owned state, not proof of authentication.
 func (c Ceremony) Account() AccountState { return c.account }
 
+// PrimaryEvidence returns server-verified primary metadata and the original
+// ceremony deadline for durable method adapters. These values are not browser
+// proof and must never be accepted from client JSON.
+func (c Ceremony) PrimaryEvidence() (Method, time.Time, time.Time) {
+	return c.evidence.Primary, c.evidence.PrimaryAt, c.expires
+}
+
 func (c Ceremony) Stage() Stage {
 	if c.evidence.Primary == "" {
 		return AwaitingPrimary

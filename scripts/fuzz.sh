@@ -8,5 +8,9 @@ go test -run '^$' -fuzz '^FuzzPHCParser$' -fuzztime=5s -parallel=2 .
 go test -run '^$' -fuzz '^FuzzEmailAndChallenge$' -fuzztime=5s -parallel=2 .
 go test -run '^$' -fuzz '^FuzzBoundedJSON$' -fuzztime=5s -parallel=2 ./passwordhttp
 
+cd ../totp
+go test -run '^$' -fuzz '^FuzzMatch$' -fuzztime=5s -parallel=2 .
+go test -run '^$' -fuzz '^FuzzBoundedJSON$' -fuzztime=5s -parallel=2 ./totphttp
+
 cd ../oidc
 go test -run '^$' -fuzz '^FuzzCallbackInput$' -fuzztime=5s -parallel=2 .

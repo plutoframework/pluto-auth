@@ -9,7 +9,7 @@ attribution, but do not restore its generic schema/plugin framework wholesale.
 | --- | --- | --- |
 | Shared account/ceremony foundation | v0.4 | Version/policy fence, method evidence, password integration, freshness guard |
 | Social and federated sign-in | In progress | OIDC/Google sign-in delivered; GitHub and explicit linking/unlinking remain |
-| Native second-factor workflow | Next | TOTP setup/verification, hashed single-use recovery codes, protected factor changes |
+| Native second-factor workflow | Library implemented, unreleased | [TOTP](TOTP.md), pending sign-in, single-use recovery and protected changes; ecosystem CLI/UI follow-up remains |
 | Account security management | Planned | Email/password changes, session/device management and step-up UI |
 | Passwordless and machine access | Planned | Passkeys, magic links and scoped API keys |
 
@@ -33,3 +33,8 @@ Tracking: [OIDC vertical](https://github.com/plutoframework/pluto-auth/issues/1)
 [provider adapters](https://github.com/plutoframework/pluto-auth/issues/2),
 [explicit linking](https://github.com/plutoframework/pluto-auth/issues/3) and the
 [ecosystem index](https://github.com/plutoframework/pluto/issues/1).
+Native-factor tracking: [TOTP/pending sign-in](https://github.com/plutoframework/pluto-auth/issues/4)
+and [recovery/lifecycle](https://github.com/plutoframework/pluto-auth/issues/5).
+The library ships an explicit migration, HTTP adapter, compiling constructor and
+PostgreSQL integration tests. CLI/frontend source is outside this repository and
+is not claimed complete by these library changes.
