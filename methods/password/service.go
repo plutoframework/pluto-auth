@@ -279,6 +279,7 @@ func (s *Service) SignIn(
 	if _, supported := s.store.(auth.AccountSessionStore); supported {
 		issued, err = s.sessions.StartAuthenticated(ctx, proof)
 	} else {
+
 		// Legacy custom stores retain their prior fenced password contract.
 		// They cannot issue recent-authentication evidence or satisfy step-up.
 		state := ceremony.Account()

@@ -153,6 +153,7 @@ func New(ctx context.Context, config Config) (*Client, error) {
 
 func random() string {
 	var bytes [32]byte
+
 	// crypto/rand.Read terminates the process if system entropy fails.
 	_, _ = rand.Read(bytes[:])
 

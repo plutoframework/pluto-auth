@@ -21,9 +21,11 @@ import (
 
 type Config struct {
 	Transport httpauth.Config
+
 	// Ingress must bound requests using a trusted client identity before decoding
 	// or KDF work. Do not trust raw forwarding headers from arbitrary clients.
 	Ingress func(http.Handler) http.Handler
+
 	// OnError receives only public sentinel errors, never raw input or secrets.
 	OnError func(context.Context, error)
 }

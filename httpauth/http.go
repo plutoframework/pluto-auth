@@ -18,13 +18,16 @@ const CookieName = "__Host-pluto_session"
 type sessionKey struct{}
 
 type Config struct {
+
 	// TrustedOrigins are exact browser origins, never wildcard patterns.
 	// Explicit HTTP loopback origins support local development only. Session
 	// cookies remain Secure, so use local HTTPS for browser authentication.
 	TrustedOrigins []string
+
 	// AllowBearer enables explicit Authorization credentials for API clients.
 	// Cookie and Authorization credentials together are always rejected.
 	AllowBearer bool
+
 	// WriteError may supply the application's JSON envelope. It must not
 	// expose credentials or internal storage errors to the client.
 	WriteError func(http.ResponseWriter, *http.Request, int, string)

@@ -19,6 +19,7 @@ type Credential struct {
 }
 
 type CredentialStore interface {
+
 	// Lookup returns auth.ErrNotFound for an unknown identifier.
 	Lookup(context.Context, string) (Credential, error)
 }

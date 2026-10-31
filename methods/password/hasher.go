@@ -28,6 +28,7 @@ type Config struct {
 	MemoryKiB   uint32
 	Iterations  uint32
 	Parallelism uint8
+
 	// MaxConcurrent bounds simultaneous Argon2 computations per Hasher.
 	// Request rate limits are separately required by Authenticator.
 	MaxConcurrent int

@@ -579,6 +579,7 @@ func TestRecoveryRollbackAndDisableFence(t *testing.T) {
 	ctx := context.Background()
 	browser := totp.Browser()
 	pending := h.begin(t, browser, totp.SignIn)
+
 	// Force failure after proof consumption, proving the entire operation rolls back.
 	_, err := h.pool.Exec(
 		ctx,
@@ -631,6 +632,7 @@ func TestRecoveryRollbackAndDisableFence(t *testing.T) {
 	}
 
 	defer func() { _ = tx.Rollback(ctx) }()
+
 	// Hold the exact account fence while another completion is in flight.
 	if _, err := tx.Exec(
 		ctx,

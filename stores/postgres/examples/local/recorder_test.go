@@ -35,6 +35,7 @@ func (r *recorder) Send(ctx context.Context, n password.Notification) error {
 
 func Example() {
 	sender := &recorder{}
+
 	// Synthetic material only; no email/network delivery or real credentials.
 	err := sender.Send(context.Background(), password.Notification{
 		Email: "synthetic@example.invalid", Purpose: password.VerifyEmail,

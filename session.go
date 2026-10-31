@@ -49,6 +49,7 @@ type IssuedSession struct {
 type SessionStore interface {
 	Create(context.Context, Digest, Session) error
 	Use(context.Context, Digest, time.Time, time.Duration) (Session, error)
+
 	// Consume atomically validates and deletes a session for one-use rotation.
 	Consume(context.Context, Digest, time.Time, time.Duration) (Session, error)
 	Delete(context.Context, Digest) error

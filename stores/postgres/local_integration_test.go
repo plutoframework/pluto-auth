@@ -384,6 +384,7 @@ func TestPostgresLocalTransactionRollback(t *testing.T) {
 	s, store, sender, pool := localSetup(t)
 	ctx := context.Background()
 	now := time.Now().UTC()
+
 	// The second insert fails; the first insert must not leave an account.
 	err := store.Enroll(ctx, password.Account{
 		ID: "rollback-account", Email: "rollback@example.com",
@@ -603,6 +604,7 @@ func TestPostgresStaleSignInFence(t *testing.T) {
 				)
 				done <- err
 			}()
+
 			// Reaching Create proves verification of the OLD hash has completed.
 			select {
 			case <-barrier.ready:

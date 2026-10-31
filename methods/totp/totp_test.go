@@ -14,6 +14,7 @@ import (
 
 func TestVectorsAndWindow(t *testing.T) {
 	seed := []byte("12345678901234567890")
+
 	// RFC 6238 SHA-1 vectors, reduced to the configured six digits.
 	for _, v := range []struct {
 		seconds int64

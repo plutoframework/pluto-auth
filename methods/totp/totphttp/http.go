@@ -22,6 +22,7 @@ const BrowserCookie = "__Host-pluto_factor"
 type Config struct {
 	Transport httpauth.Config
 	Ingress   func(http.Handler) http.Handler
+
 	// Primary must verify actual credentials and return a server-local ceremony.
 	// password.Service.BeginSignIn is directly assignable. Never decode evidence.
 	Primary func(context.Context, string, []byte) (auth.Ceremony, error)
@@ -96,6 +97,7 @@ func (h *Handler) begin(w http.ResponseWriter, r *http.Request) {
 
 	if input.Action == totp.SignIn && ceremony.Stage() == auth.Authenticated {
 		_, at, _ := ceremony.PrimaryEvidence()
+
 		// The manager checks the deadline against its configured clock; persistence
 		// independently rechecks it after account lock waits.
 		proof, err := ceremony.Complete(at)
@@ -127,6 +129,7 @@ func (h *Handler) begin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	browser := totp.Browser()
+
 	// The display label is server-owned subject identity, never a client-selected
 	// authority or supplied email that could disagree with the verified account.
 	setup, err := h.service.Begin(

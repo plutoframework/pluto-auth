@@ -87,6 +87,7 @@ type Store interface {
 type Config struct {
 	Sessions auth.Config
 	Issuer   string
+
 	// Changed runs after commit, without secret material. Hosts should notify
 	// users through an independently verified channel. Failure cannot undo commit.
 	Changed func(context.Context, string, Action)

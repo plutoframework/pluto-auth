@@ -19,8 +19,10 @@ import (
 type Config struct {
 	Transport httpauth.Config
 	Ingress   func(http.Handler) http.Handler
+
 	// SuccessPath is a fixed local path, never supplied by the browser/provider.
 	SuccessPath string
+
 	// CookieNamespace must be stable and unique for each configured client.
 	CookieNamespace string
 }

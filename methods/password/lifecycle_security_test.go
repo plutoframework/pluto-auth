@@ -222,6 +222,7 @@ func TestStaleCredentialIssuanceFence(t *testing.T) {
 				_, err := s.SignIn(ctx, "a@example.com", []byte(oldPassword))
 				done <- err
 			}()
+
 			// Create is reached ONLY after the old password has been verified (or the
 			// old versioned session consumed). Commit mutation before allowing issuance.
 			select {
