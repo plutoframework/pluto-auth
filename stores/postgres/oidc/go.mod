@@ -6,7 +6,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/plutoframework/pluto-auth v0.4.0
-	github.com/plutoframework/pluto-auth/methods/oidc v0.1.0
+	github.com/plutoframework/pluto-auth/methods/oidc v0.1.1
 	github.com/plutoframework/pluto-auth/stores/postgres v0.5.0
 )
 
