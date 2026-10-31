@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+go run ./scripts/commentspacing -formatter "$PWD/scripts/golangci.sh" .
 root="$PWD"
 
 python3 - <<'PYTHON'
@@ -16,14 +17,7 @@ PYTHON
 
 for module in . methods/password methods/oidc methods/totp stores/postgres stores/postgres/oidc stores/postgres/totp; do
   cd "$root/$module"
-  "$root/scripts/golangci.sh" fmt --diff ./... > /tmp/pluto-auth-format-$$.diff
-  if [[ -s /tmp/pluto-auth-format-$$.diff ]]; then
-    cat /tmp/pluto-auth-format-$$.diff
-    rm /tmp/pluto-auth-format-$$.diff
-    exit 1
-  fi
-  rm /tmp/pluto-auth-format-$$.diff
-  "$root/scripts/golangci.sh" run ./...
+  "$root/scripts/lint.sh" ./...
   go test ./...
   go vet ./...
   go build ./...

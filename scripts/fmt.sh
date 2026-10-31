@@ -9,3 +9,6 @@ for module in . methods/password methods/oidc methods/totp stores/postgres store
   "$root/scripts/golangci.sh" run --enable-only wsl_v5 --fix ./...
   "$root/scripts/golangci.sh" fmt ./...
 done
+
+cd "$root"
+go run ./scripts/commentspacing -write .
