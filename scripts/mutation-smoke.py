@@ -161,6 +161,22 @@ MUTATIONS = [
         "./stores/postgres",
         "TestPostgresExpiredIssuanceRollsBackSession",
     ),
+    (
+        "OIDC nonce binding ignored",
+        "methods/oidc/client.go",
+        "[]byte(verified.Nonce),",
+        "[]byte(tx.Nonce),",
+        "./methods/oidc",
+        "TestCodeFlow",
+    ),
+    (
+        "OIDC multi-audience authorized party ignored",
+        "methods/oidc/client.go",
+        "len(verified.Audience) > 1",
+        "false && len(verified.Audience) > 1",
+        "./methods/oidc",
+        "TestCodeFlow",
+    ),
 ]
 
 
