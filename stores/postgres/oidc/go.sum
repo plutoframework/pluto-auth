@@ -15,8 +15,12 @@ github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/plutoframework/pluto-auth v0.4.0 h1:yTY5ejF1AJi0rn2SLtKg25MlA68KxgzE+nqFUfXygAg=
 github.com/plutoframework/pluto-auth v0.4.0/go.mod h1:HQZU04XbBCfkfALpO4twiunihATxfNdH7jIrzpBAyDA=
+github.com/plutoframework/pluto-auth/methods/oidc v0.1.0 h1:avvzht72rLbB5DIE17yAwTcNZfS/OmJTqe0pWmQ+gIU=
+github.com/plutoframework/pluto-auth/methods/oidc v0.1.0/go.mod h1:IFHcmb9Q2FgrbJEUhg4B4WGKiWKR5aDq1XyoQU75qTw=
 github.com/plutoframework/pluto-auth/methods/password v0.4.0 h1:tQ/LCHmnE6/XHSDXV/TObQNHAQevcgpLvFUE6ncm674=
 github.com/plutoframework/pluto-auth/methods/password v0.4.0/go.mod h1:eqRcl5kkKiLlAS17EjvpevZRIlJwcb8H4/UTIjuRyZo=
+github.com/plutoframework/pluto-auth/stores/postgres v0.5.0 h1:kbDvAr0MO9yWzFE3MdsIdAk2CEdtk7CQkJbo9OlLfVk=
+github.com/plutoframework/pluto-auth/stores/postgres v0.5.0/go.mod h1:oT+Le0OZt0W2pwCche3vBokdHlHaNvFjW+XY/ngjF+Q=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
