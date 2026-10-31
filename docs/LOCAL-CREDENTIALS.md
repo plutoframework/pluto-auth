@@ -3,7 +3,7 @@
 This MVP owns an account ID, canonical email, Argon2id password hash, verified /
 disabled flags, credential version and one challenge per purpose. It owns no
 application profile, role, tenant or membership. Enrollment never grants access
-to business resources. Social/federated OIDC, MFA, OAuth authorization servers,
+to business resources. [Social/OIDC sign-in](OIDC.md) is an optional native module. MFA, OAuth authorization servers,
 frontend/admin UI and email-address changes are tracked in the [expansion roadmap](ROADMAP.md).
 
 ## Configure the service and HTTP adapter
@@ -15,7 +15,7 @@ ingress limits. Install the published modules:
 ```sh
 go get github.com/plutoframework/pluto-auth@v0.4.0
 go get github.com/plutoframework/pluto-auth/methods/password@v0.4.0
-go get github.com/plutoframework/pluto-auth/stores/postgres@v0.4.0
+go get github.com/plutoframework/pluto-auth/stores/postgres@v0.5.0
 go get github.com/jackc/pgx/v5/pgxpool@v5.11.0
 ```
 
@@ -349,3 +349,10 @@ and logout. Fuzzing and focused guard mutations are bounded samples, not exhaust
 verification. A focused maintainer self-review found no high-confidence unresolved
 vulnerability in these flows; this is not an independent audit or production
 readiness certification.
+
+## PostgreSQL v0.5 upgrade
+
+After migrations 001–003, explicitly apply `004_external_accounts.sql` before
+using the v0.5 adapter. Existing password/email data is preserved; password lookup
+excludes external-only accounts. No constructor executes migrations. Federated
+accounts do not acquire local credentials through password recovery.

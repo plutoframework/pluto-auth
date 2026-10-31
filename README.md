@@ -28,7 +28,7 @@ Password and PostgreSQL modules are optional; pin them explicitly when needed:
 
 ```sh
 go get github.com/plutoframework/pluto-auth/methods/password@v0.4.0
-go get github.com/plutoframework/pluto-auth/stores/postgres@v0.4.0
+go get github.com/plutoframework/pluto-auth/stores/postgres@v0.5.0
 ```
 
 ### 2. Wire the real credential lifecycle
@@ -186,3 +186,10 @@ An independent Limen hard fork: preserve LICENSE, NOTICE and provenance. Pre-rel
 Start with [CONTRIBUTING.md](CONTRIBUTING.md), then choose a [good first issue](https://github.com/plutoframework/pluto/blob/main/CONTRIBUTING.md#starter-tasks).
 
 MIT licensed. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## OIDC and Google sign-in
+
+Use the optional [OIDC workflow](docs/OIDC.md) for native provider sign-in with
+PKCE, verified ID tokens, encrypted PostgreSQL login transactions and fenced
+account sessions. Apply migration 004 on account-backed upgrades. Email strings
+never merge accounts; linking and native MFA remain separate roadmap work.

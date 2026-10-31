@@ -4,6 +4,7 @@ github.com/jackc/pgx/v5 v5.7.6 h1:rWQc5FwZSPX58r1OQmkuaNicxdmExaEz5A2DO2hUuTk=
 github.com/jackc/pgx/v5 v5.7.6/go.mod h1:aruU7o91Tc2q2cFp5h4uP3f6ztExVpyVv88Xl/8Vl8M=
 github.com/kr/pretty v0.3.0/go.mod h1:640gp4NfQd8pI5XOwp5fnNeVWj67G7CFk/SaSQn7NBk=
 github.com/plutoframework/pluto-auth/methods/password v0.0.0-20261028021955-c1eabc6c680e/go.mod h1:SkFmoibgo/wNkATrRq/b5dbYvuZ/ZPjx/OCAx/QCWzc=
+github.com/plutoframework/pluto-auth/stores/postgres v0.4.0/go.mod h1:oT+Le0OZt0W2pwCche3vBokdHlHaNvFjW+XY/ngjF+Q=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/mod v0.38.0/go.mod h1:V6Xz0pq8TQ3dGqVQ1FVHuelZpAL0uNhSkk9ogYP3c40=

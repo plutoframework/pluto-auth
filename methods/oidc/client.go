@@ -24,6 +24,9 @@ var (
 // Transaction contains secrets. Persist encrypted server-side; never serialize
 // it into a cookie, browser response, diagnostic or log.
 type Transaction struct {
+	Issuer        string
+	ClientID      string
+	RedirectURL   string
 	State         string
 	BrowserDigest [32]byte
 	Nonce         string
@@ -168,7 +171,12 @@ func (c *Client) Begin(
 	}
 
 	tx := Transaction{
-		State: random(), Nonce: random(), Verifier: oauth2.GenerateVerifier(),
+		Issuer:        c.issuer,
+		ClientID:      c.oauth.ClientID,
+		RedirectURL:   c.oauth.RedirectURL,
+		State:         random(),
+		Nonce:         random(),
+		Verifier:      oauth2.GenerateVerifier(),
 		BrowserDigest: sha256.Sum256([]byte(browserBinding)),
 		Expires:       c.clock().Add(c.lifetime),
 	}
@@ -200,10 +208,16 @@ func (c *Client) Complete(ctx context.Context, state, browserBinding,
 		return Identity{}, ErrDenied
 	}
 
-	if tx.State != state || subtle.ConstantTimeCompare(
-		tx.BrowserDigest[:], digest[:]) != 1 || !now.Before(tx.Expires) ||
-		tx.Expires.After(now.Add(10*time.Minute)) || len(tx.Nonce) != 43 ||
-		len(tx.Verifier) < 43 || len(tx.Verifier) > 128 {
+	if tx.Issuer != c.issuer || tx.ClientID != c.oauth.ClientID ||
+		tx.RedirectURL != c.oauth.RedirectURL ||
+		tx.State != state ||
+		subtle.ConstantTimeCompare(
+			tx.BrowserDigest[:], digest[:]) != 1 ||
+		!now.Before(tx.Expires) ||
+		tx.Expires.After(now.Add(10*time.Minute)) ||
+		len(tx.Nonce) != 43 ||
+		len(tx.Verifier) < 43 ||
+		len(tx.Verifier) > 128 {
 		return Identity{}, ErrDenied
 	}
 

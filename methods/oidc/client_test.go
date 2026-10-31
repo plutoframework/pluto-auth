@@ -62,7 +62,7 @@ func TestCodeFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, scenario := range []string{"valid", "nonce", "audience", "issuer", "expired", "azp", "signature", "browser", "expiry", "replay"} {
+	for _, scenario := range []string{"valid", "nonce", "audience", "issuer", "expired", "azp", "signature", "binding", "browser", "expiry", "replay"} {
 		t.Run(scenario, func(t *testing.T) {
 			now := time.Now().Truncate(time.Second)
 			store := &pending{}
@@ -210,6 +210,10 @@ func TestCodeFlow(t *testing.T) {
 				q.Get("code_challenge") == "" ||
 				q.Get("nonce") != nonce {
 				t.Fatal("missing PKCE/nonce")
+			}
+
+			if scenario == "binding" {
+				store.tx.Issuer = "https://other.example"
 			}
 
 			if scenario == "browser" {

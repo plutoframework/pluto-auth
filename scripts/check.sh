@@ -14,7 +14,7 @@ for path in Path('.').rglob('*'):
         raise SystemExit(f'File exceeds 1,000 lines: {path}')
 PYTHON
 
-for module in . methods/password methods/oidc stores/postgres; do
+for module in . methods/password methods/oidc stores/postgres stores/postgres/oidc; do
   cd "$root/$module"
   "$root/scripts/golangci.sh" fmt --diff ./... > /tmp/pluto-auth-format-$$.diff
   if [[ -s /tmp/pluto-auth-format-$$.diff ]]; then

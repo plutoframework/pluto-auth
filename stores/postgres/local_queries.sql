@@ -3,10 +3,10 @@ INSERT INTO pluto_auth_accounts (id, email, password_hash)
 VALUES ($1, $2, $3);
 
 -- name: LookupAccount :one
-SELECT * FROM pluto_auth_accounts WHERE email = $1;
+SELECT * FROM pluto_auth_accounts WHERE email = $1 AND local_credentials;
 
 -- name: LockAccountEmail :one
-SELECT * FROM pluto_auth_accounts WHERE email = $1 FOR UPDATE;
+SELECT * FROM pluto_auth_accounts WHERE email = $1 AND local_credentials FOR UPDATE;
 
 -- name: LockAccountID :one
 SELECT * FROM pluto_auth_accounts WHERE id = $1 FOR UPDATE;
@@ -66,7 +66,7 @@ FROM pluto_auth_local_sessions b, pluto_auth_accounts a
 WHERE s.token_digest = sqlc.arg(digest) AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
-    AND a.verified AND NOT a.disabled
+    AND (a.verified OR NOT a.local_credentials) AND NOT a.disabled
     AND (NOT a.second_factor_required OR
         b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= sqlc.arg(now_at)::timestamptz
@@ -84,7 +84,7 @@ USING pluto_auth_local_sessions b, pluto_auth_accounts a
 WHERE s.token_digest = sqlc.arg(digest) AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
-    AND a.verified AND NOT a.disabled
+    AND (a.verified OR NOT a.local_credentials) AND NOT a.disabled
     AND (NOT a.second_factor_required OR
         b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= sqlc.arg(now_at)::timestamptz

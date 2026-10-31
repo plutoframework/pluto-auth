@@ -27,6 +27,11 @@ var LocalSchema string
 //go:embed migrations/003_authentication.sql
 var AuthenticationSchema string
 
+// ExternalSchema allows accounts without password credentials after migration 003.
+//
+//go:embed migrations/004_external_accounts.sql
+var ExternalSchema string
+
 // TransactionDB must start top-level transactions, never nested savepoints.
 // A pgxpool.Pool is appropriate; pgx.Tx intentionally does not implement it.
 type TransactionDB interface {

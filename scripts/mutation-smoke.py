@@ -177,6 +177,10 @@ MUTATIONS = [
         "./methods/oidc",
         "TestCodeFlow",
     ),
+    ('OIDC stored issuer binding ignored', 'methods/oidc/client.go', 'tx.Issuer != c.issuer ||', 'false && tx.Issuer != c.issuer ||', './methods/oidc', 'TestCodeFlow'),
+    ('OIDC callback browser binding ignored in SQL', 'stores/postgres/internal/db/oidc_queries.sql.go', 'AND browser_digest = $2', 'AND ($2::bytea IS NOT NULL)', './stores/postgres/oidc', 'TestEncryptedTransactions'),
+    ('OIDC pending capacity ignored', 'stores/postgres/internal/db/oidc_queries.sql.go', '< $5::bigint', '< $5::bigint + 100', './stores/postgres/oidc', 'TestEncryptedTransactions'),
+    ('OIDC begin Origin guard removed', 'methods/oidc/oidchttp/http.go', 'transport.Guard(mux)', 'mux', './stores/postgres/oidc', 'TestBrowserSignInAndAccountFence'),
 ]
 
 

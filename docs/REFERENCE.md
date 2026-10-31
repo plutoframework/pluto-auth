@@ -133,11 +133,17 @@ not a drop-in replacement for Limen or a promise to maintain its plugin suite.
 
 ## Scope
 
-The current authentication method is local password credentials, backed by
-the shared account/evidence foundation. Social/federated OIDC
-providers, MFA/passkeys, frontend/admin UI and email-address changes are
-planned in the [expansion roadmap](ROADMAP.md). OAuth authorization-server and
+Local password and optional OIDC/Google sign-in use the shared account/evidence
+foundation. GitHub OAuth, explicit account linking, MFA/passkeys, account-security
+UI and email-address changes remain in the [expansion roadmap](ROADMAP.md). OAuth authorization-server and
 enterprise identity-platform roles remain separate scope decisions. There are no automatic admins, tenants or grants. Deployment still
 requires real delivery, shared limits, trusted ingress, migrations and an
 application-specific security review; this is not an audited production-ready
 identity service.
+
+## Native OIDC sign-in
+
+The optional [OIDC workflow](OIDC.md) provides generic OIDC and a pinned Google
+profile, encrypted PostgreSQL browser transactions and shared fenced sessions.
+The PostgreSQL v0.5 adapter requires migration 004 after 001–003. GitHub OAuth,
+explicit linking, native MFA and account settings are still roadmap work.

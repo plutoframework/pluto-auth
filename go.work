@@ -5,4 +5,7 @@ use (
 	./methods/oidc
 	./methods/password
 	./stores/postgres
+	./stores/postgres/oidc
 )
+
+replace github.com/plutoframework/pluto-auth/methods/oidc v0.0.0 => ./methods/oidc
