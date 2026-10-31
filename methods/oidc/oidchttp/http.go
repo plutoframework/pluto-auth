@@ -120,6 +120,16 @@ func (h *Handler) begin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   600,
 	})
+
+	if r.Header.Get("Accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
+
+		_ = json.NewEncoder(w).
+			Encode(map[string]any{"data": map[string]string{"authorization_url": location}})
+
+		return
+	}
+
 	http.Redirect(w, r, location, http.StatusSeeOther)
 }
 

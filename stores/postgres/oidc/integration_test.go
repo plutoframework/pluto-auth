@@ -370,6 +370,24 @@ func TestBrowserSignInAndAccountFence(t *testing.T) {
 
 		return result
 	}
+	jsonRequest := httptest.NewRequest("POST", "https://app.example/begin", nil)
+	jsonRequest.Header.Set("Origin", "https://app.example")
+	jsonRequest.Header.Set("Accept", "application/json")
+
+	jsonResult := httptest.NewRecorder()
+	handler.ServeHTTP(jsonResult, jsonRequest)
+
+	var jsonBody struct {
+		Data struct {
+			URL string `json:"authorization_url"`
+		} `json:"data"`
+	}
+	if jsonResult.Code != 200 ||
+		json.Unmarshal(jsonResult.Body.Bytes(), &jsonBody) != nil ||
+		!strings.HasPrefix(jsonBody.Data.URL, issuer+"/authorize?") {
+		t.Fatal("missing JSON navigation response")
+	}
+
 	badOrigin := httptest.NewRecorder()
 	handler.ServeHTTP(
 		badOrigin,

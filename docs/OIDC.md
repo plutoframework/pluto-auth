@@ -7,9 +7,9 @@ issuer/subject pair. A matching provider email never merges a local account.
 ## Install and migrate
 
 ```sh
-go get github.com/plutoframework/pluto-auth/methods/oidc@v0.1.0
+go get github.com/plutoframework/pluto-auth/methods/oidc@v0.1.1
 go get github.com/plutoframework/pluto-auth/stores/postgres@v0.5.0
-go get github.com/plutoframework/pluto-auth/stores/postgres/oidc@v0.1.0
+go get github.com/plutoframework/pluto-auth/stores/postgres/oidc@v0.1.1
 ```
 
 Apply the session schema, then migrations 002, 003 and **004_external_accounts.sql**
@@ -41,8 +41,11 @@ substituted in the application example.
 
 Mount using `http.StripPrefix("/auth/oidc", handler)`:
 
-- `POST /auth/oidc/begin` requires an exact trusted Origin. A browser form can
-  navigate directly to the provider; the 303 sets a Secure/HttpOnly binding cookie.
+- `POST /auth/oidc/begin` requires an exact trusted Origin. Frontends send
+  `Accept: application/json` through a same-origin API request, then navigate to
+  `data.authorization_url`. This preserves strict referrer policies and sets a
+  Secure/HttpOnly binding cookie. Without that Accept header, trusted clients
+  receive the original 303 redirect.
 - `GET /auth/oidc/callback` checks state, cookie, nonce, PKCE, signature, issuer,
   audience and authorized party before account resolution and session issuance.
 - The final 303 goes to a fixed configured local success path. Browser/provider

@@ -1,6 +1,6 @@
 # OpenID Connect sign-in
 
-Optional module: `github.com/plutoframework/pluto-auth/methods/oidc` v0.1.0.
+Optional module: `github.com/plutoframework/pluto-auth/methods/oidc` v0.1.1.
 
 - Signed OIDC discovery/code flow with S256 PKCE, nonce and browser binding.
 - Exact configured issuer, client audience and authorized-party validation.

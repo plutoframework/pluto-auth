@@ -39,3 +39,8 @@ PostgreSQL database. Tests create/drop isolated schemas and exercise encrypted
 transactions, finite capacity, browser binding, concurrent consumption, actual
 OIDC HTTP/session issuance, duplicate callbacks, email collision, rotation and
 account disable. These tests are not a live Google test or an independent audit.
+
+Browser clients request begin with `Accept: application/json`, then navigate to
+`data.authorization_url`. This preserves `Origin` under a no-referrer document
+policy. Native form navigation may send `Origin: null` and is rejected, rather
+than weakening the trusted-Origin guard. Callback/session cookies remain native.
