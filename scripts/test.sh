@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 root="$PWD"
-for module in . methods/password stores/postgres; do
+for module in . methods/password methods/oidc stores/postgres stores/postgres/oidc; do
   cd "$root/$module"
   go test "$@" ./...
 done

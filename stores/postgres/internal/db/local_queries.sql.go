@@ -48,7 +48,7 @@ func (q *Queries) BindLocalSession(ctx context.Context, arg BindLocalSessionPara
 }
 
 const challengeAccount = `-- name: ChallengeAccount :one
-SELECT a.id, a.email, a.password_hash, a.credential_version, a.verified, a.disabled, a.second_factor_required FROM pluto_auth_accounts a
+SELECT a.id, a.email, a.password_hash, a.credential_version, a.verified, a.disabled, a.second_factor_required, a.local_credentials FROM pluto_auth_accounts a
 JOIN pluto_auth_challenges c ON a.id = c.account_id
 WHERE c.token_digest = $1 AND c.purpose = $2
     AND c.credential_version = a.credential_version AND NOT a.disabled
@@ -75,6 +75,7 @@ func (q *Queries) ChallengeAccount(ctx context.Context, arg ChallengeAccountPara
 		&i.Verified,
 		&i.Disabled,
 		&i.SecondFactorRequired,
+		&i.LocalCredentials,
 	)
 	return i, err
 }
@@ -85,7 +86,7 @@ USING pluto_auth_local_sessions b, pluto_auth_accounts a
 WHERE s.token_digest = $1 AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
-    AND a.verified AND NOT a.disabled
+    AND (a.verified OR NOT a.local_credentials) AND NOT a.disabled
     AND (NOT a.second_factor_required OR
         b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= $2::timestamptz
@@ -170,7 +171,7 @@ func (q *Queries) EnrollAccount(ctx context.Context, arg EnrollAccountParams) er
 }
 
 const lockAccountEmail = `-- name: LockAccountEmail :one
-SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE email = $1 FOR UPDATE
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required, local_credentials FROM pluto_auth_accounts WHERE email = $1 AND local_credentials FOR UPDATE
 `
 
 func (q *Queries) LockAccountEmail(ctx context.Context, email string) (PlutoAuthAccount, error) {
@@ -184,12 +185,13 @@ func (q *Queries) LockAccountEmail(ctx context.Context, email string) (PlutoAuth
 		&i.Verified,
 		&i.Disabled,
 		&i.SecondFactorRequired,
+		&i.LocalCredentials,
 	)
 	return i, err
 }
 
 const lockAccountID = `-- name: LockAccountID :one
-SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE id = $1 FOR UPDATE
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required, local_credentials FROM pluto_auth_accounts WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockAccountID(ctx context.Context, id string) (PlutoAuthAccount, error) {
@@ -203,12 +205,13 @@ func (q *Queries) LockAccountID(ctx context.Context, id string) (PlutoAuthAccoun
 		&i.Verified,
 		&i.Disabled,
 		&i.SecondFactorRequired,
+		&i.LocalCredentials,
 	)
 	return i, err
 }
 
 const lookupAccount = `-- name: LookupAccount :one
-SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE email = $1
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required, local_credentials FROM pluto_auth_accounts WHERE email = $1 AND local_credentials
 `
 
 func (q *Queries) LookupAccount(ctx context.Context, email string) (PlutoAuthAccount, error) {
@@ -222,12 +225,13 @@ func (q *Queries) LookupAccount(ctx context.Context, email string) (PlutoAuthAcc
 		&i.Verified,
 		&i.Disabled,
 		&i.SecondFactorRequired,
+		&i.LocalCredentials,
 	)
 	return i, err
 }
 
 const lookupAccountID = `-- name: LookupAccountID :one
-SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required FROM pluto_auth_accounts WHERE id = $1
+SELECT id, email, password_hash, credential_version, verified, disabled, second_factor_required, local_credentials FROM pluto_auth_accounts WHERE id = $1
 `
 
 func (q *Queries) LookupAccountID(ctx context.Context, id string) (PlutoAuthAccount, error) {
@@ -241,6 +245,7 @@ func (q *Queries) LookupAccountID(ctx context.Context, id string) (PlutoAuthAcco
 		&i.Verified,
 		&i.Disabled,
 		&i.SecondFactorRequired,
+		&i.LocalCredentials,
 	)
 	return i, err
 }
@@ -355,7 +360,7 @@ FROM pluto_auth_local_sessions b, pluto_auth_accounts a
 WHERE s.token_digest = $2 AND s.token_digest = b.token_digest
     AND s.subject_id = a.id AND b.account_id = a.id
     AND b.credential_version = a.credential_version
-    AND a.verified AND NOT a.disabled
+    AND (a.verified OR NOT a.local_credentials) AND NOT a.disabled
     AND (NOT a.second_factor_required OR
         b.second_factor_method IN ('totp', 'recovery_code'))
     AND s.created_at <= $1::timestamptz

@@ -2,6 +2,8 @@ go 1.25.5
 
 use (
 	.
+	./methods/oidc
 	./methods/password
 	./stores/postgres
+	./stores/postgres/oidc
 )

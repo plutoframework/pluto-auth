@@ -27,7 +27,9 @@ func (s *LocalStore) Create(ctx context.Context, digest auth.Digest,
 			Disabled:             row.Disabled,
 			SecondFactorRequired: row.SecondFactorRequired,
 		}
-		if !row.Verified || state.Accepts(session) != nil {
+		if (row.LocalCredentials && !row.Verified) ||
+			(!row.LocalCredentials && session.Authentication.Primary != auth.MethodOIDC) ||
+			state.Accepts(session) != nil {
 			return auth.ErrUnauthenticated
 		}
 

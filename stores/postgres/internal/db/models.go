@@ -16,6 +16,7 @@ type PlutoAuthAccount struct {
 	Verified             bool
 	Disabled             bool
 	SecondFactorRequired bool
+	LocalCredentials     bool
 }
 
 type PlutoAuthChallenge struct {
@@ -27,6 +28,12 @@ type PlutoAuthChallenge struct {
 	ExpiresAt         time.Time
 }
 
+type PlutoAuthExternalIdentity struct {
+	Issuer    string
+	Subject   string
+	AccountID string
+}
+
 type PlutoAuthLocalSession struct {
 	TokenDigest        []byte
 	AccountID          string
@@ -35,6 +42,13 @@ type PlutoAuthLocalSession struct {
 	PrimaryAt          time.Time
 	SecondFactorMethod string
 	SecondFactorAt     time.Time
+}
+
+type PlutoAuthOidcTransaction struct {
+	StateDigest    []byte
+	BrowserDigest  []byte
+	EncryptedProof []byte
+	ExpiresAt      time.Time
 }
 
 type PlutoAuthSession struct {

@@ -3,7 +3,8 @@
 Pluto Auth v0.4 adds shared account policy, server-local authentication decisions
 and method evidence. The first integrated method is the existing password
 service. This is the foundation for native social sign-in, MFA and step-up flows;
-it does not yet implement an OIDC provider adapter or TOTP verification.
+the optional [OIDC workflow](OIDC.md) now verifies provider sign-in. Native TOTP
+verification remains on the roadmap.
 
 ## Upgrade
 
@@ -13,6 +14,7 @@ Account-backed `postgres.NewLocal` users must explicitly apply these in order:
 1. `schema.sql` — original sessions.
 2. `migrations/002_local_credentials.sql` — password accounts and challenges.
 3. `migrations/003_authentication.sql` — account factor policy and evidence.
+4. `migrations/004_external_accounts.sql` — explicit local/external credential kinds.
 
 Apply each once through application migration tooling. No constructor runs DDL.
 Migration 003 preserves old sessions with **unknown** authentication evidence.

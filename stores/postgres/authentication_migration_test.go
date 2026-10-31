@@ -51,7 +51,10 @@ func TestAuthenticationMigrationPreservesUnknownLegacyEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := pool.Exec(ctx, postgres.AuthenticationSchema); err != nil {
+	if _, err := pool.Exec(
+		ctx,
+		postgres.AuthenticationSchema+"\n"+postgres.ExternalSchema,
+	); err != nil {
 		t.Fatal(err)
 	}
 
