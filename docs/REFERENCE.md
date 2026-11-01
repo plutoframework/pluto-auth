@@ -147,3 +147,27 @@ The optional [OIDC workflow](OIDC.md) provides generic OIDC and a pinned Google
 profile, encrypted PostgreSQL browser transactions and shared fenced sessions.
 The PostgreSQL v0.5 adapter requires migration 004 after 001–003. GitHub OAuth,
 explicit linking, native MFA and account settings are still roadmap work.
+
+## Verified identity callback (unreleased candidate)
+
+`Manager.WithIdentity(ctx, token, callback)` authenticates an existing session
+and supplies an opaque `*Identity` only within the callback. There is no public
+constructor from a subject string or `Session`. `Manager.UseIdentity` accepts
+only an identity from that exact manager and revalidates session activity,
+expiration and revocation before each use. A foreign issuer, zero value, expired
+scope or canceled context denies. Copies share callback lifetime; closing waits
+for active uses. Only the digest is retained, never the bearer token.
+
+Session issuance is still trusted: `Start` requires a caller that has already
+verified credentials. These APIs prove verification by the configured session
+manager, not that an application credential verifier is correct. Revocation can
+race effects after validation and does not cancel callbacks already executing.
+Auth establishes no tenant membership, permission or resource ownership.
+
+`httpauth.Transport.RequireIdentity` preserves existing cookie Origin and
+opt-in bearer rules and installs this opaque identity for the HTTP callback.
+`httpauth.IdentityFromContext` retrieves it; operation gates must still revalidate
+it with their configured manager. Workers and tools must use an explicit trusted
+credential verifier, never construct authority from a payload actor field.
+The optional candidate RBAC identity module combines this boundary with current
+membership, permission and resource policies. These APIs are not yet published.

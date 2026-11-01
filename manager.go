@@ -140,6 +140,13 @@ func (m *Manager) Authenticate(
 		return Session{}, ErrUnauthenticated
 	}
 
+	return m.authenticateDigest(ctx, digest)
+}
+
+func (m *Manager) authenticateDigest(
+	ctx context.Context,
+	digest Digest,
+) (Session, error) {
 	now := m.config.Clock().UTC()
 
 	session, err := m.store.Use(ctx, digest, now, m.config.IdleTimeout)

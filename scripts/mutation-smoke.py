@@ -10,6 +10,22 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 MUTATIONS = [
     (
+        "identity lifetime retained",
+        "identity.go",
+        "s.active = false",
+        "s.active = true",
+        ".",
+        "TestIdentityProvenanceAndLifetime",
+    ),
+    (
+        "foreign identity issuer accepted",
+        "identity.go",
+        "identity.state.manager != m",
+        "false",
+        ".",
+        "TestIdentityIssuerAndCurrentExpiry",
+    ),
+    (
         "bearer enabled without opt in",
         "httpauth/http.go",
         "if !t.allowBearer || len(headers) != 1 {",
