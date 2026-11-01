@@ -15,6 +15,14 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 MUTATIONS = [
     (
+        "original identity cancellation ignored",
+        "identity.go",
+        "context.AfterFunc(state.context, cancel)",
+        "context.AfterFunc(context.Background(), cancel)",
+        ".",
+        "TestIdentityOriginalCancellationReachesActiveUse",
+    ),
+    (
         "identity lifetime retained",
         "identity.go",
         "s.active = false",

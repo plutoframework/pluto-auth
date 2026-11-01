@@ -163,6 +163,9 @@ explicit linking, native MFA and account settings are still roadmap work.
 
 ## Verified identity callback (unreleased candidate)
 
+The matching product guide is updated in the
+[site companion PR #5](https://github.com/plutoframework/pluto-site/pull/5).
+
 `Manager.WithIdentity(ctx, token, callback)` authenticates an existing session
 and supplies an opaque `*Identity` only within the callback. There is no public
 constructor from a subject string or `Session`. `Manager.UseIdentity` accepts
@@ -185,3 +188,7 @@ it with their configured manager. Workers and tools must use an explicit trusted
 credential verifier, never construct authority from a payload actor field.
 The optional candidate RBAC identity module combines this boundary with current
 membership, permission and resource policies. These APIs are not yet published.
+
+Active uses propagate cancellation from both the issuing scope and the supplied
+use context through revalidation and callbacks. Dependencies and callbacks must
+honor cancellation; already completed effects are not rolled back.

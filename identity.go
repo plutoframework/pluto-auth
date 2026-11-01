@@ -6,9 +6,8 @@ import (
 )
 
 // Identity is an opaque session-verified callback-lifetime identity. Copies
-// share
-// expiration state. Its zero value cannot authorize a use. It grants no role,
-// permission, tenant membership or resource ownership.
+// share expiration state. Its zero value cannot authorize a use. It grants no
+// role, permission, tenant membership or resource ownership.
 type Identity struct {
 	state *identityState
 }
@@ -28,10 +27,8 @@ type identityState struct {
 // WithIdentity verifies a bearer session using the existing store contract and
 // supplies a restricted identity to run. No public string constructor exists.
 // When run returns or panics, admission closes and active uses finish before
-// the
-// scope returns. Session issuance remains a trusted credential-verifier
-// boundary:
-// callers of Start must already have verified credentials.
+// the scope returns. Session issuance remains a trusted credential-verifier
+// boundary: callers of Start must already have verified credentials.
 func (m *Manager) WithIdentity(
 	ctx context.Context,
 	token string,
@@ -86,12 +83,11 @@ func (s *identityState) finish() {
 }
 
 // Use revalidates the session, expiry and revocation before invoking run with
-// its
-// verified subject. A supplied context cannot erase the original cancellation.
-// Only the digest is retained, never the raw bearer token. Identity is not a
-// reusable proof: every use consults the configured store again. Store
-// freshness
-// and revocation races after validation remain the documented session contract.
+// its verified subject. A supplied context cannot erase the original
+// cancellation. Only the digest is retained, never the raw bearer token.
+// Identity is not a reusable proof: every use consults the configured store
+// again. Store freshness and revocation races after validation remain the
+// documented session contract.
 func (i *Identity) Use(
 	ctx context.Context,
 	run func(context.Context, string) error,
@@ -117,6 +113,13 @@ func (i *Identity) Use(
 
 	state.mutex.Unlock()
 	defer state.finish()
+
+	// Keep values from the use context and cancellation from both scopes.
+	ctx, cancel := context.WithCancel(ctx)
+
+	stop := context.AfterFunc(state.context, cancel)
+	defer cancel()
+	defer stop()
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -155,8 +158,8 @@ func (i *Identity) Use(
 	return run(ctx, state.subject)
 }
 
-// UseIdentity accepts only identities created by this exact trusted manager.
-// A different Manager or a caller-provided Session cannot establish provenance.
+// UseIdentity accepts only identities created by this exact trusted manager. A
+// different Manager or a caller-provided Session cannot establish provenance.
 func (m *Manager) UseIdentity(
 	ctx context.Context,
 	identity *Identity,
