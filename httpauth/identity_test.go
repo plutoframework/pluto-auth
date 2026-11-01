@@ -52,7 +52,11 @@ func TestHTTPIdentityPreservesCredentialAndOriginBoundary(t *testing.T) {
 	}{
 		{"", "", http.StatusForbidden},
 		{"https://evil.example.com", "", http.StatusForbidden},
-		{"https://app.example.com", "Bearer " + issued.Token, http.StatusUnauthorized},
+		{
+			"https://app.example.com",
+			"Bearer " + issued.Token,
+			http.StatusUnauthorized,
+		},
 		{"https://app.example.com", "", http.StatusNoContent},
 	} {
 		request := httptest.NewRequest(

@@ -5,7 +5,8 @@ import (
 	"sync"
 )
 
-// Identity is an opaque session-verified callback-lifetime identity. Copies share
+// Identity is an opaque session-verified callback-lifetime identity. Copies
+// share
 // expiration state. Its zero value cannot authorize a use. It grants no role,
 // permission, tenant membership or resource ownership.
 type Identity struct {
@@ -26,8 +27,10 @@ type identityState struct {
 
 // WithIdentity verifies a bearer session using the existing store contract and
 // supplies a restricted identity to run. No public string constructor exists.
-// When run returns or panics, admission closes and active uses finish before the
-// scope returns. Session issuance remains a trusted credential-verifier boundary:
+// When run returns or panics, admission closes and active uses finish before
+// the
+// scope returns. Session issuance remains a trusted credential-verifier
+// boundary:
 // callers of Start must already have verified credentials.
 func (m *Manager) WithIdentity(
 	ctx context.Context,
@@ -82,10 +85,12 @@ func (s *identityState) finish() {
 	s.closed.Broadcast()
 }
 
-// Use revalidates the session, expiry and revocation before invoking run with its
+// Use revalidates the session, expiry and revocation before invoking run with
+// its
 // verified subject. A supplied context cannot erase the original cancellation.
 // Only the digest is retained, never the raw bearer token. Identity is not a
-// reusable proof: every use consults the configured store again. Store freshness
+// reusable proof: every use consults the configured store again. Store
+// freshness
 // and revocation races after validation remain the documented session contract.
 func (i *Identity) Use(
 	ctx context.Context,

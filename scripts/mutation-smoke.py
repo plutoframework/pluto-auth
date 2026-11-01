@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Bounded auth mutations in disposable copies; no comprehensive coverage claim."""
+(
+    (
+        "Bounded auth mutations in disposable copies; no "
+        "comprehensive coverage claim."
+    )
+)
+
 from pathlib import Path
 import os
 import shutil
 import subprocess
 import tempfile
-
 
 ROOT = Path(__file__).resolve().parent.parent
 MUTATIONS = [
@@ -53,7 +58,10 @@ MUTATIONS = [
         "rotation token retained",
         "stores/memory/store.go",
         "delete(s.sessions, digest)\n\n\treturn item.session, nil",
-        "// mutation: leave consumed session present\n\n\treturn item.session, nil",
+        (
+            "// mutation: leave consumed session "
+            "present\n\n\treturn item.session, nil"
+        ),
         ".",
         "TestRotationSingleUse",
     ),
@@ -193,38 +201,121 @@ MUTATIONS = [
         "./methods/oidc",
         "TestCodeFlow",
     ),
-    ('OIDC stored issuer binding ignored', 'methods/oidc/client.go', 'tx.Issuer != c.issuer ||', 'false && tx.Issuer != c.issuer ||', './methods/oidc', 'TestCodeFlow'),
-    ('OIDC callback browser binding ignored in SQL', 'stores/postgres/internal/db/oidc_queries.sql.go', 'AND browser_digest = $2', 'AND ($2::bytea IS NOT NULL)', './stores/postgres/oidc', 'TestEncryptedTransactions'),
-    ('OIDC pending capacity ignored', 'stores/postgres/internal/db/oidc_queries.sql.go', '< $5::bigint', '< $5::bigint + 100', './stores/postgres/oidc', 'TestEncryptedTransactions'),
-    ('OIDC begin Origin guard removed', 'methods/oidc/oidchttp/http.go', 'transport.Guard(mux)', 'mux', './stores/postgres/oidc', 'TestBrowserSignInAndAccountFence'),
-    ('atomic TOTP counter ignored', 'stores/postgres/totp/commit.go', 'c.Step <= f.LastStep', 'c.Step < f.LastStep', './stores/postgres/totp', 'TestAtomicTOTPCounterAcrossActions'),
-    ('TOTP replay counter ignored', 'methods/totp/totp.go', 'step > last', 'step >= last', './methods/totp', 'TestVectorsAndWindow'),
-    ('TOTP browser binding ignored', 'stores/postgres/totp/store.go', 'p.browser_digest=$2', '($2::bytea IS NOT NULL)', './stores/postgres/totp', 'TestNativeSignInReplayAndRecovery'),
-    ('recovery code retained', 'stores/postgres/totp/commit.go', 'DELETE FROM pluto_auth_totp_recovery\n     WHERE account_id=$1 AND digest=$2', 'SELECT digest FROM pluto_auth_totp_recovery\n     WHERE account_id=$1 AND digest=$2', './stores/postgres/totp', 'TestNativeSignInReplayAndRecovery'),
-    ('factor Origin guard removed', 'methods/totp/totphttp/http.go', 'transport.Guard(mux)', 'mux', './methods/totp/totphttp', 'TestDeniedRequests'),
+    (
+        "OIDC stored issuer binding ignored",
+        "methods/oidc/client.go",
+        "tx.Issuer != c.issuer ||",
+        "false && tx.Issuer != c.issuer ||",
+        "./methods/oidc",
+        "TestCodeFlow",
+    ),
+    (
+        "OIDC callback browser binding ignored in SQL",
+        "stores/postgres/internal/db/oidc_queries.sql.go",
+        "AND browser_digest = $2",
+        "AND ($2::bytea IS NOT NULL)",
+        "./stores/postgres/oidc",
+        "TestEncryptedTransactions",
+    ),
+    (
+        "OIDC pending capacity ignored",
+        "stores/postgres/internal/db/oidc_queries.sql.go",
+        "< $5::bigint",
+        "< $5::bigint + 100",
+        "./stores/postgres/oidc",
+        "TestEncryptedTransactions",
+    ),
+    (
+        "OIDC begin Origin guard removed",
+        "methods/oidc/oidchttp/http.go",
+        "transport.Guard(mux)",
+        "mux",
+        "./stores/postgres/oidc",
+        "TestBrowserSignInAndAccountFence",
+    ),
+    (
+        "atomic TOTP counter ignored",
+        "stores/postgres/totp/commit.go",
+        "c.Step <= f.LastStep",
+        "c.Step < f.LastStep",
+        "./stores/postgres/totp",
+        "TestAtomicTOTPCounterAcrossActions",
+    ),
+    (
+        "TOTP replay counter ignored",
+        "methods/totp/totp.go",
+        "step > last",
+        "step >= last",
+        "./methods/totp",
+        "TestVectorsAndWindow",
+    ),
+    (
+        "TOTP browser binding ignored",
+        "stores/postgres/totp/store.go",
+        "p.browser_digest=$2",
+        "($2::bytea IS NOT NULL)",
+        "./stores/postgres/totp",
+        "TestNativeSignInReplayAndRecovery",
+    ),
+    (
+        "recovery code retained",
+        "stores/postgres/totp/commit.go",
+        (
+            "DELETE FROM pluto_auth_totp_recovery\n     WHERE "
+            "account_id=$1 AND digest=$2"
+        ),
+        (
+            "SELECT digest FROM pluto_auth_totp_recovery\n    "
+            " WHERE account_id=$1 AND digest=$2"
+        ),
+        "./stores/postgres/totp",
+        "TestNativeSignInReplayAndRecovery",
+    ),
+    (
+        "factor Origin guard removed",
+        "methods/totp/totphttp/http.go",
+        "transport.Guard(mux)",
+        "mux",
+        "./methods/totp/totphttp",
+        "TestDeniedRequests",
+    ),
 ]
 
 
 def execute(args, cwd, timeout):
     return subprocess.run(
-        args, cwd=cwd, capture_output=True, text=True, timeout=timeout,
+        args,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
     )
 
 
 def main():
     if not os.environ.get("PLUTO_AUTH_TEST_DATABASE_URL"):
-        raise SystemExit("Set PLUTO_AUTH_TEST_DATABASE_URL to a disposable DB; SQL mutants must run")
+        raise SystemExit(
+            (
+                "Set PLUTO_AUTH_TEST_DATABASE_URL to a "
+                "disposable DB; SQL mutants must run"
+            )
+        )
     baseline = execute(["./scripts/test.sh"], ROOT, 120)
     if baseline.returncode:
         raise SystemExit(baseline.stdout + baseline.stderr)
 
     counts = dict.fromkeys(["killed", "survived", "invalid", "timed-out"], 0)
     for name, filename, before, after, package, test in MUTATIONS:
-        with tempfile.TemporaryDirectory(prefix="pluto-auth-mutation-") as temporary:
+        with tempfile.TemporaryDirectory(
+            prefix="pluto-auth-mutation-"
+        ) as temporary:
             checkout = Path(temporary) / "library"
             shutil.copytree(
-                ROOT, checkout,
-                ignore=shutil.ignore_patterns(".git", "bin", "*.test", "coverage.*"),
+                ROOT,
+                checkout,
+                ignore=shutil.ignore_patterns(
+                    ".git", "bin", "*.test", "coverage.*"
+                ),
             )
             path = checkout / filename
             content = path.read_text()
@@ -235,15 +326,24 @@ def main():
             try:
                 binary = Path(temporary) / "mutant.test"
                 built = execute(
-                    ["go", "test", "-c", "-o", str(binary), package], checkout, 60,
+                    ["go", "test", "-c", "-o", str(binary), package],
+                    checkout,
+                    60,
                 )
                 if built.returncode:
                     outcome = "invalid"
                     output = built.stdout + built.stderr
                 else:
                     run = execute(
-                        [str(binary), "-test.run", f"^{test}$", "-test.timeout", "15s"],
-                        checkout, 20,
+                        [
+                            str(binary),
+                            "-test.run",
+                            f"^{test}$",
+                            "-test.timeout",
+                            "15s",
+                        ],
+                        checkout,
+                        20,
                     )
                     output = run.stdout + run.stderr
                     if "test timed out" in output:

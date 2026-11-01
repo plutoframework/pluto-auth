@@ -10,7 +10,8 @@ import (
 
 type identityKey struct{}
 
-// IdentityFromContext retrieves the opaque identity installed by RequireIdentity.
+// IdentityFromContext retrieves the opaque identity installed by
+// RequireIdentity.
 // A present identity still requires live validation by its configured issuer at
 // each operation/use. It proves neither tenant membership nor resource access.
 func IdentityFromContext(ctx context.Context) (*auth.Identity, bool) {
@@ -24,7 +25,8 @@ func IdentityFromContext(ctx context.Context) (*auth.Identity, bool) {
 }
 
 // RequireIdentity preserves Require's credential ambiguity, bearer opt-in and
-// cookie Origin rules, then supplies a callback-lifetime session identity. It is
+// cookie Origin rules, then supplies a callback-lifetime session identity. It
+// is
 // additive: existing FromContext consumers remain compatible.
 func (t *Transport) RequireIdentity(next http.Handler) http.Handler {
 	return t.Require(
