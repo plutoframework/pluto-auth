@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-go test -run '^$' -fuzz '^FuzzTokenDigest$' -fuzztime=5s -parallel=2 .
-go test -run '^$' -fuzz '^FuzzCeremonyTransitions$' -fuzztime=5s -parallel=2 .
+
+# Go 1.25 can fail when duration-based fuzzing expires (go.dev/issue/75804).
+# Bound work by execution count and retain a hard timeout for hangs.
+# HTTP targets construct requests, so use a smaller execution budget.
+go test -run '^$' -fuzz '^FuzzTokenDigest$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
+go test -run '^$' -fuzz '^FuzzCeremonyTransitions$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
 cd methods/password
-go test -run '^$' -fuzz '^FuzzPHCParser$' -fuzztime=5s -parallel=2 .
-go test -run '^$' -fuzz '^FuzzEmailAndChallenge$' -fuzztime=5s -parallel=2 .
-go test -run '^$' -fuzz '^FuzzBoundedJSON$' -fuzztime=5s -parallel=2 ./passwordhttp
+go test -run '^$' -fuzz '^FuzzPHCParser$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
+go test -run '^$' -fuzz '^FuzzEmailAndChallenge$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
+go test -run '^$' -fuzz '^FuzzBoundedJSON$' \
+  -fuzztime=5000x -timeout=2m -parallel=2 ./passwordhttp
 
 cd ../totp
-go test -run '^$' -fuzz '^FuzzMatch$' -fuzztime=5s -parallel=2 .
-go test -run '^$' -fuzz '^FuzzBoundedJSON$' -fuzztime=5s -parallel=2 ./totphttp
+go test -run '^$' -fuzz '^FuzzMatch$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
+go test -run '^$' -fuzz '^FuzzBoundedJSON$' \
+  -fuzztime=5000x -timeout=2m -parallel=2 ./totphttp
 
 cd ../oidc
-go test -run '^$' -fuzz '^FuzzCallbackInput$' -fuzztime=5s -parallel=2 .
+go test -run '^$' -fuzz '^FuzzCallbackInput$' \
+  -fuzztime=250000x -timeout=2m -parallel=2 .
