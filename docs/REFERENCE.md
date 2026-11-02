@@ -7,14 +7,17 @@ Module: `github.com/plutoframework/pluto-auth` (Go 1.25.5+).
 Pre-release; no independent security audit or compatibility guarantee.
 
 The active library provides opaque sessions, typed persistence and net/http
-cookie authentication (with opt-in opaque bearer credentials). Optional modules add local enrollment, verified-email password sign-in,
-verification/resend, password recovery, account disable and a Postgres store. Authentication establishes identity; application membership,
+cookie authentication (with opt-in opaque bearer credentials). Optional modules
+add local enrollment, verified-email password sign-in,
+verification/resend, password recovery, account disable and a Postgres store.
+Authentication establishes identity; application membership,
 resource policies and [Pluto RBAC](https://github.com/plutoframework/pluto-rbac)
 decide authorization. No hidden globals, startup DDL or automatic routes.
 
 ## Browse the implementation
 
-- `session.go`, `manager.go`, `token.go`: session contract, lifecycle and tokens.
+- `session.go` , `manager.go` , `token.go` : session contract, lifecycle and
+tokens.
 - `httpauth/`: net/http middleware, exact Origin guard and secure host cookies.
 - `stores/memory/`: bounded store for tests and single-process development.
 - `stores/postgres/`: independent pgx/sqlc module, schema and generated queries.
@@ -31,10 +34,14 @@ actual version requirements without local filesystem replacements.
 
 ## Account authentication and expansion
 
-See [account authentication](AUTHENTICATION.md) for v0.4's shared account policy,
-password evidence, recent-authentication guard and mandatory account-store upgrade
-migration. [The roadmap](ROADMAP.md) places social/OIDC, MFA/passkeys and account
-management in planned application capabilities, rather than permanent exclusions.
+See [account authentication](AUTHENTICATION.md) for v0.4's shared account
+policy,
+password evidence, recent-authentication guard and mandatory account-store
+upgrade
+migration. [The roadmap](ROADMAP.md) places social/OIDC, MFA/passkeys and
+account
+management in planned application capabilities, rather than permanent
+exclusions.
 
 ## Session setup
 
@@ -79,8 +86,10 @@ fencing. Use the new service for this local account workflow.
 
 Wrap login handlers in transport.Guard for Origin validation. Require already
 includes it for cookie-authenticated routes. Set Config.AllowBearer explicitly
-for API clients; mixed cookie/Authorization or duplicate credentials are rejected.
-Bearer credentials are not ambient cookies and do not require an Origin. Logout must revoke server state before
+for API clients; mixed cookie/Authorization or duplicate credentials are
+rejected.
+Bearer credentials are not ambient cookies and do not require an Origin. Logout
+must revoke server state before
 ClearCookie; cookie clearing alone does not revoke a stolen token. Do not mutate
 business state in GET/HEAD/OPTIONS handlers. HTTPS is required for the cookie.
 Credentialed CORS and proxy trust are explicit application configuration.
@@ -91,7 +100,8 @@ Import `github.com/plutoframework/pluto-auth/stores/postgres` separately.
 Construct postgres.New(pool) with a pgxpool.Pool. Apply schema.sql through your
 application migration system before serving requests; no constructor applies it.
 Schedule Store.PruneExpired explicitly. Session-only users can keep their
-existing schema and `postgres.New(pool)` adapter. Local-password users explicitly
+existing schema and `postgres.New(pool)` adapter. Local-password users
+explicitly
 apply optional migration `migrations/002_local_credentials.sql` and use
 `postgres.NewLocal(pool)` for all local session operations. Auth owns minimal
 account/hash/version and challenge state; application profiles, memberships and
@@ -134,9 +144,12 @@ not a drop-in replacement for Limen or a promise to maintain its plugin suite.
 ## Scope
 
 Local password and optional OIDC/Google sign-in use the shared account/evidence
-foundation. GitHub OAuth, explicit account linking, MFA/passkeys, account-security
-UI and email-address changes remain in the [expansion roadmap](ROADMAP.md). OAuth authorization-server and
-enterprise identity-platform roles remain separate scope decisions. There are no automatic admins, tenants or grants. Deployment still
+foundation. GitHub OAuth, explicit account linking, MFA/passkeys,
+account-security
+UI and email-address changes remain in the [expansion roadmap](ROADMAP.md) .
+OAuth authorization-server and
+enterprise identity-platform roles remain separate scope decisions. There are no
+automatic admins, tenants or grants. Deployment still
 requires real delivery, shared limits, trusted ingress, migrations and an
 application-specific security review; this is not an audited production-ready
 identity service.
@@ -147,3 +160,35 @@ The optional [OIDC workflow](OIDC.md) provides generic OIDC and a pinned Google
 profile, encrypted PostgreSQL browser transactions and shared fenced sessions.
 The PostgreSQL v0.5 adapter requires migration 004 after 001–003. GitHub OAuth,
 explicit linking, native MFA and account settings are still roadmap work.
+
+## Verified identity callback (unreleased candidate)
+
+The matching product guide is updated in the
+[site companion PR #5](https://github.com/plutoframework/pluto-site/pull/5).
+
+`Manager.WithIdentity(ctx, token, callback)` authenticates an existing session
+and supplies an opaque `*Identity` only within the callback. There is no public
+constructor from a subject string or `Session`. `Manager.UseIdentity` accepts
+only an identity from that exact manager and revalidates session activity,
+expiration and revocation before each use. A foreign issuer, zero value, expired
+scope or canceled context denies. Copies share callback lifetime; closing waits
+for active uses. Only the digest is retained, never the bearer token.
+
+Session issuance is still trusted: `Start` requires a caller that has already
+verified credentials. These APIs prove verification by the configured session
+manager, not that an application credential verifier is correct. Revocation can
+race effects after validation and does not cancel callbacks already executing.
+Auth establishes no tenant membership, permission or resource ownership.
+
+`httpauth.Transport.RequireIdentity` preserves existing cookie Origin and
+opt-in bearer rules and installs this opaque identity for the HTTP callback.
+`httpauth.IdentityFromContext` retrieves it; operation gates must still
+revalidate
+it with their configured manager. Workers and tools must use an explicit trusted
+credential verifier, never construct authority from a payload actor field.
+The optional candidate RBAC identity module combines this boundary with current
+membership, permission and resource policies. These APIs are not yet published.
+
+Active uses propagate cancellation from both the issuing scope and the supplied
+use context through revalidation and callbacks. Dependencies and callbacks must
+honor cancellation; already completed effects are not rolled back.
