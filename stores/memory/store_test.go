@@ -103,3 +103,59 @@ func TestStorageContract(t *testing.T) {
 		t.Fatal("session resurrected")
 	}
 }
+
+func TestRevocationContract(t *testing.T) {
+	store, err := memory.New(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	ctx := context.Background()
+
+	for digest, subject := range map[auth.Digest]string{
+		{1}: "alice",
+		{2}: "alice",
+		{3}: "bob",
+	} {
+		if err := store.Create(ctx, digest, auth.Session{
+			ID: "s", SubjectID: subject, CreatedAt: now,
+			LastSeenAt: now, ExpiresAt: now.Add(time.Hour),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := store.DeleteSubject(ctx, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, digest := range []auth.Digest{{1}, {2}} {
+		if _, err := store.Use(
+			ctx,
+			digest,
+			now,
+			0,
+		); !errors.Is(err, auth.ErrNotFound) {
+			t.Fatal("revoked subject session still usable")
+		}
+	}
+
+	if _, err := store.Use(ctx, auth.Digest{3}, now, 0); err != nil {
+		t.Fatal("other subject revoked")
+	}
+
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+
+	if err := store.DeleteSubject(
+		canceled,
+		"bob",
+	); !errors.Is(err, context.Canceled) {
+		t.Fatal("canceled revocation succeeded")
+	}
+
+	if _, err := store.Use(ctx, auth.Digest{3}, now, 0); err != nil {
+		t.Fatal("canceled revocation changed store")
+	}
+}
