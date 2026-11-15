@@ -49,6 +49,12 @@ func (s *DeviceStore) CreateAuthorization(
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	for _, stale := range s.authorizations {
+		if !authorization.CreatedAt.Before(stale.ExpiresAt) {
+			s.dropAuthorization(stale)
+		}
+	}
+
 	if _, taken := s.authorizations[authorization.Device]; taken {
 		return device.ErrConflict
 	}

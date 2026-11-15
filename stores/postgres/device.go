@@ -80,9 +80,15 @@ func (s *DeviceStore) CreateAuthorization(
 	a device.Authorization,
 ) error {
 	return s.transaction(ctx, func(tx pgx.Tx) error {
+
+		// Expired requests (including one holding this user code) are
+		// pruned in small batches so abandoned requests cannot accumulate.
 		if _, err := tx.Exec(ctx, `
 DELETE FROM pluto_auth_device_requests
-WHERE user_digest = $1 AND expires_at <= $2`,
+WHERE user_digest = $1 AND expires_at <= $2
+   OR id IN (
+       SELECT id FROM pluto_auth_device_requests
+       WHERE expires_at <= $2 LIMIT 16)`,
 			a.User[:], a.CreatedAt); err != nil {
 			return err
 		}
