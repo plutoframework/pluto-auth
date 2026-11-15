@@ -141,6 +141,11 @@ func newRig(t *testing.T) *rig {
 			Name:      "Example CLI",
 			ActorType: "agent",
 			Scopes:    []string{"requests.write", "requests.read"},
+		}, {
+			ID:        "other",
+			Name:      "Other CLI",
+			ActorType: "agent",
+			Scopes:    []string{"requests.read"},
 		}},
 		Sessions: manager,
 		Authorizer: authorizer{allowed: map[string]bool{
@@ -475,6 +480,15 @@ func TestClientBinding(t *testing.T) {
 	})
 	if recorder.Code != 401 || out["error"] != "invalid_client" {
 		t.Fatalf("%d %v", recorder.Code, out)
+	}
+
+	// A code is bound to the client that started it.
+	recorder, out = r.do("POST", "/token", "", map[string]any{
+		"grant_type": device.GrantDeviceCode, "client_id": "other",
+		"device_code": started["device_code"],
+	})
+	if recorder.Code != 400 || out["error"] != "invalid_grant" {
+		t.Fatalf("foreign client: %d %v", recorder.Code, out)
 	}
 
 	if recorder, _ := r.do("POST", "/token", "", map[string]any{
