@@ -28,6 +28,10 @@ type Config struct {
 	// Cookie and Authorization credentials together are always rejected.
 	AllowBearer bool
 
+	// Integrations enables RequireService for service callers that present
+	// an integration token. It does not change Require or session bearer rules.
+	Integrations *auth.Integrations
+
 	// WriteError may supply the application's JSON envelope. It must not
 	// expose credentials or internal storage errors to the client.
 	WriteError func(http.ResponseWriter, *http.Request, int, string)
@@ -36,6 +40,7 @@ type Config struct {
 type Transport struct {
 	manager     *auth.Manager
 	allowBearer bool
+	services    *auth.Integrations
 	origins     map[string]struct{}
 	writeError  func(http.ResponseWriter, *http.Request, int, string)
 }
@@ -48,6 +53,7 @@ func New(manager *auth.Manager, config Config) (*Transport, error) {
 	transport := &Transport{
 		manager:     manager,
 		allowBearer: config.AllowBearer,
+		services:    config.Integrations,
 		origins:     make(map[string]struct{}),
 		writeError:  config.WriteError,
 	}

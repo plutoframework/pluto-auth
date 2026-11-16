@@ -31,6 +31,10 @@ golang.org/x/crypto; Postgres uses pgx. Tooling dependencies, generated sqlc
 sources and optional modules do not become core runtime dependencies. The
 checked-in go.work joins modules for development; published modules contain
 actual version requirements without local filesystem replacements.
+Development exception: `stores/postgres` currently carries
+`replace github.com/plutoframework/pluto-auth => ../..` because its
+`IntegrationStore` uses root APIs that are not yet tagged. Swap the pin for a
+coordinated root tag before releasing `stores/postgres`.
 
 ## Account authentication and expansion
 
@@ -219,3 +223,32 @@ by default), are revocable by token (RFC 7009), by the owner, or by subject.
 `POST /code`, `/token`, `/revoke` (public, behind ingress limits) and
 `GET /request`, `POST /approve`, `/deny`, `GET /grants`, `DELETE /grants/{id}`
 (browser session; unsafe methods require a trusted Origin).
+
+## Integration tokens (service callers, identity only)
+
+`auth.Integrations` issues long-lived bearer secrets for service callers. Each
+token carries an opaque tenant ID and a service-principal label chosen by the
+trusted operator that issues it, never by the caller. The 43-character secret
+is returned once by `Issue` and `Rotate` (`IssuedIntegrationToken.Secret`); only
+its `TokenDigest` is persisted. The secret is redacted from `fmt`, `slog` and
+JSON output. `Rotate` replaces the secret atomically: the old one fails at once.
+`Revoke` is idempotent and takes effect on the next request; requests already
+authenticated are not cancelled.
+
+`httpauth.Config.Integrations` enables `Transport.RequireService`, which accepts
+exactly one `Authorization: Bearer <token>` header and no session cookie, looks
+the token up on every request and installs an `auth.ServiceIdentity`
+(`TokenID`, `TenantID`, `Principal`, `IsService()`) readable with
+`httpauth.ServiceFromContext`. It is not a `Session`: `FromContext` and
+`IdentityFromContext` never return it, and session tokens fail on
+`RequireService` just as integration tokens fail on `Require`. Malformed,
+unknown and revoked tokens return the usual 401 `unauthenticated` response;
+secrets are matched by indexed digest lookup, never by comparison in Go.
+
+Stores: `stores/memory.IntegrationStore` and `stores/postgres.IntegrationStore`
+(optional migration `006_integration_tokens.sql`, independent of the account
+migrations). This layer establishes identity only. It performs no role or
+permission check, declares no routes or manifests and does not change response
+envelopes; map the tenant and principal to permissions in Pluto RBAC and
+application policy. Limits: tokens do not expire on their own, there is no
+per-token scoping, and last-use tracking and issuance listing are not provided.
