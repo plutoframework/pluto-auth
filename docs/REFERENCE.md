@@ -31,6 +31,10 @@ golang.org/x/crypto; Postgres uses pgx. Tooling dependencies, generated sqlc
 sources and optional modules do not become core runtime dependencies. The
 checked-in go.work joins modules for development; published modules contain
 actual version requirements without local filesystem replacements.
+Development exception: `stores/postgres` currently carries
+`replace github.com/plutoframework/pluto-auth => ../..` because its
+`IntegrationStore` uses root APIs that are not yet tagged. Swap the pin for a
+coordinated root tag before releasing `stores/postgres`.
 
 ## Account authentication and expansion
 

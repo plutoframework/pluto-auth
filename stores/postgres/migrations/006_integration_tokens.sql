@@ -8,8 +8,7 @@ CREATE TABLE pluto_auth_integration_tokens (
     principal text NOT NULL CHECK (principal <> ''),
     created_at timestamptz NOT NULL,
     rotated_at timestamptz,
-    revoked_at timestamptz,
-    CHECK (rotated_at IS NULL OR rotated_at >= created_at)
+    revoked_at timestamptz
 );
 
 CREATE INDEX pluto_auth_integration_tokens_tenant_idx

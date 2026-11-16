@@ -142,7 +142,10 @@ func TestIntegrationSecretNeverLeaks(t *testing.T) {
 	outputs := []string{
 		logs.String(),
 		string(encoded),
-		fmt.Sprintf("%v|%+v|%#v|%s", issued, issued, issued, issued),
+		fmt.Sprintf(
+			"%v|%+v|%#v|%s|%d|%x",
+			issued, issued, issued, issued, issued, issued,
+		),
 	}
 
 	// Errors from every failing path must not echo the presented secret.

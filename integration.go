@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 	"unicode"
@@ -56,6 +57,12 @@ func (i IssuedIntegrationToken) String() string {
 
 // GoString redacts the secret from the %#v verb.
 func (i IssuedIntegrationToken) GoString() string { return i.String() }
+
+// Format redacts the secret for every fmt verb, including mismatched verbs
+// such as %d that would otherwise print the struct fields.
+func (i IssuedIntegrationToken) Format(f fmt.State, _ rune) {
+	_, _ = io.WriteString(f, i.String())
+}
 
 // LogValue redacts the secret from log/slog output.
 func (i IssuedIntegrationToken) LogValue() slog.Value {
