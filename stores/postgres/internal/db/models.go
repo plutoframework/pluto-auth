@@ -6,6 +6,8 @@ package db
 
 import (
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PlutoAuthAccount struct {
@@ -32,6 +34,16 @@ type PlutoAuthExternalIdentity struct {
 	Issuer    string
 	Subject   string
 	AccountID string
+}
+
+type PlutoAuthIntegrationToken struct {
+	ID          string
+	TokenDigest []byte
+	TenantID    string
+	Principal   string
+	CreatedAt   time.Time
+	RotatedAt   pgtype.Timestamptz
+	RevokedAt   pgtype.Timestamptz
 }
 
 type PlutoAuthLocalSession struct {

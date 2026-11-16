@@ -15,6 +15,9 @@
   It enables no account policy by itself. Removing these tables while accounts
   still require native MFA will lock users out; do not silently clear their
   policy as a rollback strategy.
+- 006: optionally apply `006_integration_tokens.sql` for `IntegrationStore`
+  (service-caller integration tokens). It is independent of 002-005 and needs
+  only the database; it stores digests, tenant IDs and principal labels.
 
 Migration execution/version tracking and privileges belong to the application.
 Constructors never execute DDL. Apply each migration once, in order. Existing

@@ -367,6 +367,66 @@ MUTATIONS = [
         "./methods/totp/totphttp",
         "TestDeniedRequests",
     ),
+    (
+        "integration rotation keeps old secret",
+        "stores/memory/integration.go",
+        "\tdelete(s.byDigest, record.digest)\n\n\trecord.digest = digest",
+        "\trecord.digest = digest",
+        ".",
+        "TestIntegrationRevokeAndRotate",
+    ),
+    (
+        "integration revoke is a no-op",
+        "stores/memory/integration.go",
+        "\trecord.revoked = true\n\tdelete(s.byDigest, record.digest)",
+        "\t_ = record",
+        ".",
+        "TestIntegrationRevokeAndRotate",
+    ),
+    (
+        "integration rotation revives revoked token",
+        "stores/memory/integration.go",
+        "if !exists || record.revoked {\n\t\treturn auth.IntegrationToken{}, "
+        "auth.ErrNotFound\n\t}\n\n\tif _, taken",
+        "if !exists {\n\t\treturn auth.IntegrationToken{}, "
+        "auth.ErrNotFound\n\t}\n\n\tif _, taken",
+        ".",
+        "TestIntegrationRevokeAndRotate",
+    ),
+    (
+        "integration unknown token not an auth failure",
+        "integration.go",
+        "if errors.Is(err, ErrNotFound) {\n\t\treturn ServiceIdentity{}, "
+        "ErrUnauthenticated",
+        "if false && errors.Is(err, ErrNotFound) {\n\t\treturn "
+        "ServiceIdentity{}, ErrUnauthenticated",
+        ".",
+        "TestIntegrationValidationAndCancellation",
+    ),
+    (
+        "service auth accepts session cookie alongside bearer",
+        "httpauth/service.go",
+        "if cookie.Name == CookieName {",
+        "if false && cookie.Name == CookieName {",
+        "./httpauth",
+        "TestRequireServiceResolvesServiceIdentity",
+    ),
+    (
+        "postgres integration lookup ignores revocation",
+        "stores/postgres/internal/db/integration_queries.sql.go",
+        "WHERE token_digest = $1 AND revoked_at IS NULL",
+        "WHERE token_digest = $1",
+        "./stores/postgres",
+        "TestIntegrationIssueLookupRotateRevoke",
+    ),
+    (
+        "postgres integration rotation revives revoked token",
+        "stores/postgres/internal/db/integration_queries.sql.go",
+        "WHERE id = $1 AND revoked_at IS NULL\nRETURNING",
+        "WHERE id = $1\nRETURNING",
+        "./stores/postgres",
+        "TestIntegrationIssueLookupRotateRevoke",
+    ),
 ]
 
 
