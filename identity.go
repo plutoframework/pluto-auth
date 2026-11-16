@@ -17,6 +17,7 @@ type identityState struct {
 	digest  Digest
 	subject string
 	session string
+	grant   *Delegation
 	context context.Context
 	mutex   sync.Mutex
 	closed  *sync.Cond
@@ -54,6 +55,7 @@ func (m *Manager) WithIdentity(
 		digest:  digest,
 		subject: session.SubjectID,
 		session: session.ID,
+		grant:   session.Delegation.clone(),
 		context: ctx,
 		active:  true,
 	}
@@ -62,6 +64,18 @@ func (m *Manager) WithIdentity(
 	defer state.close()
 
 	return run(ctx, &Identity{state: state})
+}
+
+// Delegation reports the delegated-client metadata of the verified session
+// (for example actor_type=agent and client_id), if any. It is a copy: it
+// narrows what the identity may do and never grants anything. A caller that
+// receives ok == false holds an ordinary interactive session.
+func (i *Identity) Delegation() (Delegation, bool) {
+	if i == nil || i.state == nil || i.state.grant == nil {
+		return Delegation{}, false
+	}
+
+	return *i.state.grant.clone(), true
 }
 
 func (s *identityState) close() {

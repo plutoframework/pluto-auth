@@ -30,6 +30,10 @@ type Session struct {
 	CredentialVersion int64    `json:"-"`
 	Authentication    Evidence `json:"-"`
 
+	// Delegation is set only by the device grant overlay. It marks a session
+	// issued to a delegated client (CLI, agent) and narrows what it may do.
+	Delegation *Delegation `json:"-"`
+
 	// IssuanceDeadline is a transient Create-time bound, not session lifetime.
 	IssuanceDeadline time.Time `json:"-"`
 }

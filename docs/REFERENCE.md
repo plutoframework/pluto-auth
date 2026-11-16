@@ -192,3 +192,30 @@ membership, permission and resource policies. These APIs are not yet published.
 Active uses propagate cancellation from both the issuing scope and the supplied
 use context through revalidation and callbacks. Dependencies and callbacks must
 honor cancellation; already completed effects are not rolled back.
+
+## Device authorization grant (delegated clients)
+
+Package `device` implements RFC 8628 for a CLI or agent. `device.Service`
+issues a device code and a user code (8 characters, no vowels), the owner
+approves in a normal browser session (`Approve` takes the verified
+`*auth.Identity`, never a subject string, and refuses delegated identities),
+and the client polls the token endpoint. Polling faster than the interval
+returns `slow_down` and raises the interval by 5 seconds. Codes are single use
+and stored only as SHA-256 digests; user codes expire with the request.
+
+Issued access tokens are ordinary opaque tokens (15 minutes by default). Wrap
+the session store so `Service.Session` answers digests the store does not know:
+the resulting `auth.Session` carries an `auth.Delegation` (`GrantID`,
+`ClientID`, `ActorType`, `Tenant`, approved `Scopes`), reachable from
+`Identity.Delegation()`. A delegation only narrows: scope names are mapped to
+permissions by the application and intersected with the owner's live
+permissions. Refresh tokens rotate on every use; presenting an already rotated
+refresh token revokes the whole family and returns `invalid_grant`. A refresh
+may narrow scopes, never widen them. Grants have an absolute lifetime (90 days
+by default), are revocable by token (RFC 7009), by the owner, or by subject.
+
+`stores/memory.DeviceStore` implements `device.Store` (the Postgres store
+follows in the separately versioned `stores/postgres` module); `device/devicehttp` serves
+`POST /code`, `/token`, `/revoke` (public, behind ingress limits) and
+`GET /request`, `POST /approve`, `/deny`, `GET /grants`, `DELETE /grants/{id}`
+(browser session; unsafe methods require a trusted Origin).
