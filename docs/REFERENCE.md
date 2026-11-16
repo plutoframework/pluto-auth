@@ -214,8 +214,8 @@ refresh token revokes the whole family and returns `invalid_grant`. A refresh
 may narrow scopes, never widen them. Grants have an absolute lifetime (90 days
 by default), are revocable by token (RFC 7009), by the owner, or by subject.
 
-`stores/memory.DeviceStore` implements `device.Store` (the Postgres store
-follows in the separately versioned `stores/postgres` module); `device/devicehttp` serves
+`stores/memory.DeviceStore` and `stores/postgres.DeviceStore` (migration
+`006_device_grants.sql`) implement `device.Store`; `device/devicehttp` serves
 `POST /code`, `/token`, `/revoke` (public, behind ingress limits) and
 `GET /request`, `POST /approve`, `/deny`, `GET /grants`, `DELETE /grants/{id}`
 (browser session; unsafe methods require a trusted Origin).

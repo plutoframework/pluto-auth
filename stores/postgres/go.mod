@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/plutoframework/pluto-auth v0.4.0
+	github.com/plutoframework/pluto-auth v0.4.1-0.20261116010714-7a95c0fce4c3
 	github.com/plutoframework/pluto-auth/methods/password v0.4.0
 )
 
